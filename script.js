@@ -1,147 +1,526 @@
 /**
- * AI Travel Planning Agent - Frontend JavaScript
- * Handles form submission, API calls, and dynamic content rendering
+ * AI Travel Planning Agent - Enhanced JavaScript
+ * Next-level functionality with AI chat, analytics, and payments
  */
 
-// Global variables
-let currentItinerary = null;
-
-// DOM elements
-const travelForm = document.getElementById('travelForm');
-const submitBtn = document.getElementById('submitBtn');
-const loadingSection = document.getElementById('loadingSection');
-const resultsSection = document.getElementById('resultsSection');
-const errorSection = document.getElementById('errorSection');
-const tripSummary = document.getElementById('tripSummary');
-const itineraryContainer = document.getElementById('itineraryContainer');
-const recommendationsList = document.getElementById('recommendationsList');
-const errorMessage = document.getElementById('errorMessage');
-
-// API configuration
-const API_BASE_URL = 'http://localhost:8000';
-const API_ENDPOINTS = {
-    plan: '/api/plan',
-    health: '/api/health',
-    destinations: '/api/destinations'
+// Global configuration
+const CONFIG = {
+    API_BASE_URL: 'http://localhost:8000',
+    STRIPE_PUBLISHABLE_KEY: 'pk_test_your_stripe_key_here',
+    CHAT_UPDATE_INTERVAL: 1000,
+    ANALYTICS_UPDATE_INTERVAL: 5000,
+    MAX_CHAT_MESSAGES: 100
 };
 
-// Initialize the application
+// Global state
+const STATE = {
+    currentUser: null,
+    chatSession: null,
+    currentTrip: null,
+    analyticsData: null,
+    paymentIntent: null,
+    isProcessing: false
+};
+
+// Initialize application
 document.addEventListener('DOMContentLoaded', function() {
-    initializeForm();
-    setDefaultDate();
-    checkAPIHealth();
+    initializeApp();
 });
 
 /**
- * Initialize form event listeners and validation
+ * Initialize the application
  */
-function initializeForm() {
-    travelForm.addEventListener('submit', handleFormSubmit);
+function initializeApp() {
+    console.log('🚀 Initializing AI Travel Agent...');
     
-    // Add real-time validation
-    const inputs = travelForm.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.addEventListener('blur', validateField);
-        input.addEventListener('input', clearFieldError);
-    });
+    // Initialize components
+    initializeNavigation();
+    initializeChat();
+    initializePlanningForm();
+    initializeAnalytics();
+    initializePaymentSystem();
+    initializeEventListeners();
     
-    // Add preference selection handling
-    const preferenceItems = document.querySelectorAll('.preference-item');
-    preferenceItems.forEach(item => {
-        item.addEventListener('click', function() {
-            const checkbox = this.querySelector('input[type="checkbox"]');
-            checkbox.checked = !checkbox.checked;
-            this.classList.toggle('selected', checkbox.checked);
+    // Set default date
+    setDefaultDate();
+    
+    // Check API health
+    checkAPIHealth();
+    
+    console.log('✅ Application initialized successfully');
+}
+
+/**
+ * Initialize navigation functionality
+ */
+function initializeNavigation() {
+    const navToggle = document.getElementById('navToggle');
+    const navMenu = document.querySelector('.nav-menu');
+    
+    if (navToggle && navMenu) {
+        navToggle.addEventListener('click', () => {
+            navMenu.classList.toggle('active');
+            navToggle.classList.toggle('active');
+        });
+    }
+    
+    // Smooth scrolling for navigation links
+    document.querySelectorAll('.nav-link').forEach(link => {
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const targetId = link.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Update active navigation
+                document.querySelectorAll('.nav-link').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            }
         });
     });
 }
 
 /**
- * Set default start date to tomorrow
+ * Initialize AI chat functionality
  */
-function setDefaultDate() {
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const startDateInput = document.getElementById('startDate');
-    startDateInput.value = tomorrow.toISOString().split('T')[0];
-    startDateInput.min = tomorrow.toISOString().split('T')[0];
+function initializeChat() {
+    const chatInput = document.getElementById('chatInput');
+    const sendMessageBtn = document.getElementById('sendMessageBtn');
+    const chatMessages = document.getElementById('chatMessages');
+    
+    if (chatInput && sendMessageBtn) {
+        // Send message on Enter key
+        chatInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendChatMessage();
+            }
+        });
+        
+        // Send message on button click
+        sendMessageBtn.addEventListener('click', sendChatMessage);
+        
+        // Auto-resize input
+        chatInput.addEventListener('input', autoResizeInput);
+    }
+    
+    // Initialize suggestion buttons
+    initializeChatSuggestions();
+    
+    // Start chat session
+    startChatSession();
 }
 
 /**
- * Check if the backend API is healthy
+ * Initialize chat suggestion buttons
  */
-async function checkAPIHealth() {
-    try {
-        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.health}`);
-        if (!response.ok) {
-            console.warn('Backend API is not responding');
+function initializeChatSuggestions() {
+    document.addEventListener('click', (e) => {
+        if (e.target.classList.contains('suggestion-btn')) {
+            const message = e.target.textContent;
+            document.getElementById('chatInput').value = message;
+            sendChatMessage();
         }
+    });
+}
+
+/**
+ * Send a chat message
+ */
+async function sendChatMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+    
+    if (!message || STATE.isProcessing) return;
+    
+    // Add user message to chat
+    addChatMessage('user', message);
+    
+    // Clear input
+    chatInput.value = '';
+    autoResizeInput();
+    
+    // Show typing indicator
+    showTypingIndicator();
+    
+    try {
+        STATE.isProcessing = true;
+        
+        // Send message to AI
+        const response = await sendMessageToAI(message);
+        
+        // Remove typing indicator
+        removeTypingIndicator();
+        
+        // Add AI response
+        if (response.success) {
+            addChatMessage('ai', response.response.content, response.response.suggestions);
+        } else {
+            addChatMessage('ai', 'I apologize, but I encountered an error. Please try again.');
+        }
+        
     } catch (error) {
-        console.warn('Cannot connect to backend API:', error);
+        console.error('Chat error:', error);
+        removeTypingIndicator();
+        addChatMessage('ai', 'I apologize, but I\'m having trouble connecting right now. Please try again later.');
+    } finally {
+        STATE.isProcessing = false;
     }
 }
 
 /**
- * Handle form submission
+ * Add a message to the chat
  */
-async function handleFormSubmit(event) {
-    event.preventDefault();
+function addChatMessage(type, content, suggestions = null) {
+    const chatMessages = document.getElementById('chatMessages');
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `message ${type}-message`;
     
-    if (!validateForm()) {
+    const avatar = document.createElement('div');
+    avatar.className = 'message-avatar';
+    avatar.innerHTML = `<i class="fas fa-${type === 'ai' ? 'robot' : 'user'}"></i>`;
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    const messageText = document.createElement('p');
+    messageText.textContent = content;
+    messageContent.appendChild(messageText);
+    
+    // Add suggestions if provided
+    if (suggestions && suggestions.length > 0) {
+        const suggestionsDiv = document.createElement('div');
+        suggestionsDiv.className = 'message-suggestions';
+        
+        suggestions.forEach(suggestion => {
+            const suggestionBtn = document.createElement('button');
+            suggestionBtn.className = 'suggestion-btn';
+            suggestionBtn.textContent = suggestion;
+            suggestionsDiv.appendChild(suggestionBtn);
+        });
+        
+        messageContent.appendChild(suggestionsDiv);
+    }
+    
+    messageDiv.appendChild(avatar);
+    messageDiv.appendChild(messageContent);
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll to bottom
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+    
+    // Limit messages
+    limitChatMessages();
+}
+
+/**
+ * Show typing indicator
+ */
+function showTypingIndicator() {
+    const chatMessages = document.getElementById('chatMessages');
+    const typingDiv = document.createElement('div');
+    typingDiv.className = 'message ai-message typing-indicator';
+    typingDiv.id = 'typingIndicator';
+    
+    typingDiv.innerHTML = `
+        <div class="message-avatar">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="message-content">
+            <div class="typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    `;
+    
+    chatMessages.appendChild(typingDiv);
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+/**
+ * Remove typing indicator
+ */
+function removeTypingIndicator() {
+    const typingIndicator = document.getElementById('typingIndicator');
+    if (typingIndicator) {
+        typingIndicator.remove();
+    }
+}
+
+/**
+ * Limit chat messages to prevent memory issues
+ */
+function limitChatMessages() {
+    const chatMessages = document.getElementById('chatMessages');
+    const messages = chatMessages.querySelectorAll('.message');
+    
+    if (messages.length > CONFIG.MAX_CHAT_MESSAGES) {
+        const messagesToRemove = messages.length - CONFIG.MAX_CHAT_MESSAGES;
+        for (let i = 0; i < messagesToRemove; i++) {
+            messages[i].remove();
+        }
+    }
+}
+
+/**
+ * Auto-resize chat input
+ */
+function autoResizeInput() {
+    const chatInput = document.getElementById('chatInput');
+    if (chatInput) {
+        chatInput.style.height = 'auto';
+        chatInput.style.height = Math.min(chatInput.scrollHeight, 120) + 'px';
+    }
+}
+
+/**
+ * Start a new chat session
+ */
+async function startChatSession() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/chat/session`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                user_id: 'anonymous',
+                trip_id: null
+            })
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            STATE.chatSession = data.session_id;
+            console.log('Chat session started:', STATE.chatSession);
+        }
+    } catch (error) {
+        console.error('Failed to start chat session:', error);
+    }
+}
+
+/**
+ * Send message to AI backend
+ */
+async function sendMessageToAI(message) {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/chat/message`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            user_id: 'anonymous',
+            message: message,
+            session_id: STATE.chatSession
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    return await response.json();
+}
+
+/**
+ * Initialize trip planning form
+ */
+function initializePlanningForm() {
+    const form = document.getElementById('advancedTravelForm');
+    const startPlanningBtn = document.getElementById('startPlanningBtn');
+    
+    if (form) {
+        form.addEventListener('submit', handleTripPlanning);
+    }
+    
+    if (startPlanningBtn) {
+        startPlanningBtn.addEventListener('click', () => {
+            document.getElementById('planning').scrollIntoView({ behavior: 'smooth' });
+        });
+    }
+    
+    // Initialize form interactions
+    initializeFormInteractions();
+}
+
+/**
+ * Initialize form interactions
+ */
+function initializeFormInteractions() {
+    // Traveler count buttons
+    document.querySelectorAll('.traveler-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            const action = e.target.dataset.action;
+            const input = document.getElementById('travelers');
+            let value = parseInt(input.value);
+            
+            if (action === 'increase' && value < 10) {
+                value++;
+            } else if (action === 'decrease' && value > 1) {
+                value--;
+            }
+            
+            input.value = value;
+        });
+    });
+    
+    // Destination suggestions
+    const destinationInput = document.getElementById('destination');
+    if (destinationInput) {
+        destinationInput.addEventListener('input', debounce(handleDestinationInput, 300));
+    }
+    
+    // Save preferences button
+    const savePreferencesBtn = document.getElementById('savePreferencesBtn');
+    if (savePreferencesBtn) {
+        savePreferencesBtn.addEventListener('click', saveUserPreferences);
+    }
+}
+
+/**
+ * Handle destination input for suggestions
+ */
+async function handleDestinationInput(e) {
+    const query = e.target.value.trim();
+    const suggestionsDiv = document.getElementById('destinationSuggestions');
+    
+    if (query.length < 2) {
+        suggestionsDiv.innerHTML = '';
         return;
     }
     
-    const formData = new FormData(travelForm);
-    const travelRequest = {
-        destination: formData.get('destination'),
-        start_date: formData.get('startDate'),
-        duration: parseInt(formData.get('duration')),
-        budget: parseFloat(formData.get('budget')),
-        preferences: getSelectedPreferences(),
-        travelers: parseInt(formData.get('travelers')),
-        travel_style: formData.get('travelStyle')
-    };
-    
-    // Show loading state
-    showLoading();
-    
     try {
-        const response = await planTravel(travelRequest);
-        showResults(response);
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/places/search?q=${encodeURIComponent(query)}`);
+        if (response.ok) {
+            const places = await response.json();
+            displayDestinationSuggestions(places);
+        }
     } catch (error) {
-        showError(error.message);
+        console.error('Failed to fetch destination suggestions:', error);
     }
 }
 
 /**
- * Get selected preferences from checkboxes
+ * Display destination suggestions
  */
-function getSelectedPreferences() {
-    const preferences = [];
-    const checkboxes = document.querySelectorAll('input[name="preferences"]:checked');
-    checkboxes.forEach(checkbox => {
-        preferences.push(checkbox.value);
+function displayDestinationSuggestions(places) {
+    const suggestionsDiv = document.getElementById('destinationSuggestions');
+    
+    if (places.length === 0) {
+        suggestionsDiv.innerHTML = '';
+        return;
+    }
+    
+    const suggestionsList = document.createElement('div');
+    suggestionsList.className = 'suggestions-list';
+    
+    places.slice(0, 5).forEach(place => {
+        const suggestionItem = document.createElement('div');
+        suggestionItem.className = 'suggestion-item';
+        suggestionItem.textContent = place.name;
+        suggestionItem.addEventListener('click', () => {
+            document.getElementById('destination').value = place.name;
+            suggestionsDiv.innerHTML = '';
+        });
+        suggestionsList.appendChild(suggestionItem);
     });
-    return preferences;
+    
+    suggestionsDiv.innerHTML = '';
+    suggestionsDiv.appendChild(suggestionsList);
 }
 
 /**
- * Validate the entire form
+ * Handle trip planning form submission
  */
-function validateForm() {
+async function handleTripPlanning(e) {
+    e.preventDefault();
+    
+    if (STATE.isProcessing) return;
+    
+    // Validate form
+    if (!validateAdvancedForm()) {
+        return;
+    }
+    
+    // Collect form data
+    const formData = new FormData(e.target);
+    const tripRequest = {
+        destination: formData.get('destination'),
+        startDate: formData.get('startDate'),
+        duration: parseInt(formData.get('duration')),
+        budgetMin: parseFloat(formData.get('budgetMin')) || 0,
+        budgetMax: parseFloat(formData.get('budgetMax')) || 10000,
+        travelers: parseInt(formData.get('travelers')),
+        travelStyle: formData.get('travelStyle'),
+        preferences: Array.from(formData.getAll('preferences')),
+        accommodationType: formData.get('accommodationType'),
+        transportation: formData.get('transportation'),
+        accessibility: formData.get('accessibility'),
+        language: formData.get('language')
+    };
+    
+    // Show loading
+    showLoading();
+    
+    try {
+        STATE.isProcessing = true;
+        
+        // Plan trip
+        const response = await planTrip(tripRequest);
+        
+        if (response.success) {
+            STATE.currentTrip = response.data;
+            showResults(response.data);
+        } else {
+            showError(response.error || 'Failed to plan trip');
+        }
+        
+    } catch (error) {
+        console.error('Trip planning error:', error);
+        showError('An unexpected error occurred. Please try again.');
+    } finally {
+        STATE.isProcessing = false;
+        hideLoading();
+    }
+}
+
+/**
+ * Validate advanced form
+ */
+function validateAdvancedForm() {
+    const form = document.getElementById('advancedTravelForm');
+    const requiredFields = form.querySelectorAll('[required]');
     let isValid = true;
-    const requiredFields = travelForm.querySelectorAll('[required]');
     
     requiredFields.forEach(field => {
-        if (!validateField.call(field)) {
+        if (!field.value.trim()) {
+            showFieldError(field, 'This field is required');
             isValid = false;
+        } else {
+            clearFieldError(field);
         }
     });
     
-    // Check if at least one preference is selected
-    const preferences = getSelectedPreferences();
+    // Validate budget range
+    const budgetMin = parseFloat(document.getElementById('budgetMin').value) || 0;
+    const budgetMax = parseFloat(document.getElementById('budgetMax').value) || 0;
+    
+    if (budgetMax > 0 && budgetMin > budgetMax) {
+        showFieldError(document.getElementById('budgetMax'), 'Maximum budget must be greater than minimum');
+        isValid = false;
+    }
+    
+    // Validate preferences
+    const preferences = document.querySelectorAll('input[name="preferences"]:checked');
     if (preferences.length === 0) {
-        showFieldError('preferences', 'Please select at least one preference');
+        showError('Please select at least one preference');
         isValid = false;
     }
     
@@ -149,167 +528,143 @@ function validateForm() {
 }
 
 /**
- * Validate individual field
- */
-function validateField() {
-    const field = this;
-    const value = field.value.trim();
-    const fieldName = field.name;
-    
-    // Clear previous error
-    clearFieldError.call(field);
-    
-    // Check if required field is empty
-    if (field.hasAttribute('required') && !value) {
-        showFieldError(fieldName, 'This field is required');
-        return false;
-    }
-    
-    // Specific validation rules
-    switch (fieldName) {
-        case 'destination':
-            if (value.length < 2) {
-                showFieldError(fieldName, 'Destination must be at least 2 characters');
-                return false;
-            }
-            break;
-        case 'budget':
-            if (parseFloat(value) < 500) {
-                showFieldError(fieldName, 'Budget must be at least $500');
-                return false;
-            }
-            break;
-        case 'duration':
-            if (parseInt(value) < 1 || parseInt(value) > 30) {
-                showFieldError(fieldName, 'Duration must be between 1 and 30 days');
-                return false;
-            }
-            break;
-    }
-    
-    return true;
-}
-
-/**
  * Show field error
  */
-function showFieldError(fieldName, message) {
-    const field = document.querySelector(`[name="${fieldName}"]`);
-    if (field) {
-        field.classList.add('error');
-        
-        // Create or update error message
-        let errorElement = field.parentNode.querySelector('.field-error');
-        if (!errorElement) {
-            errorElement = document.createElement('div');
-            errorElement.className = 'field-error';
-            errorElement.style.color = '#e53e3e';
-            errorElement.style.fontSize = '0.85rem';
-            errorElement.style.marginTop = '4px';
-            field.parentNode.appendChild(errorElement);
-        }
-        errorElement.textContent = message;
-    }
+function showFieldError(field, message) {
+    clearFieldError(field);
+    
+    const errorDiv = document.createElement('div');
+    errorDiv.className = 'field-error';
+    errorDiv.textContent = message;
+    
+    field.parentNode.appendChild(errorDiv);
+    field.classList.add('error');
 }
 
 /**
  * Clear field error
  */
-function clearFieldError() {
-    const field = this;
-    field.classList.remove('error');
-    
-    const errorElement = field.parentNode.querySelector('.field-error');
-    if (errorElement) {
-        errorElement.remove();
+function clearFieldError(field) {
+    const errorDiv = field.parentNode.querySelector('.field-error');
+    if (errorDiv) {
+        errorDiv.remove();
     }
+    field.classList.remove('error');
 }
 
 /**
- * Show loading state
+ * Plan trip with backend
  */
-function showLoading() {
-    hideAllSections();
-    loadingSection.style.display = 'block';
-    
-    // Disable submit button
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Planning...';
-}
-
-/**
- * Hide all sections
- */
-function hideAllSections() {
-    loadingSection.style.display = 'none';
-    resultsSection.style.display = 'none';
-    errorSection.style.display = 'none';
-}
-
-/**
- * Plan travel using the backend API
- */
-async function planTravel(travelRequest) {
-    const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.plan}`, {
+async function planTrip(tripRequest) {
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/plan`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
         },
-        body: JSON.stringify(travelRequest)
+        body: JSON.stringify(tripRequest)
     });
     
     if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to plan travel');
+        throw new Error(errorData.detail || 'Failed to plan trip');
     }
     
     return await response.json();
 }
 
 /**
- * Show travel results
+ * Show loading section
  */
-function showResults(response) {
-    currentItinerary = response;
-    
-    // Hide loading and show results
+function showLoading() {
     hideAllSections();
-    resultsSection.style.display = 'block';
+    document.getElementById('loading').classList.remove('hidden');
     
-    // Reset form button
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Plan My Trip';
+    // Start progress animation
+    startProgressAnimation();
+}
+
+/**
+ * Hide loading section
+ */
+function hideLoading() {
+    document.getElementById('loading').classList.add('hidden');
+}
+
+/**
+ * Start progress animation
+ */
+function startProgressAnimation() {
+    const progressFill = document.getElementById('progressFill');
+    const steps = document.querySelectorAll('.step');
+    let currentStep = 1;
     
-    // Display trip summary
-    displayTripSummary(response);
+    const progressInterval = setInterval(() => {
+        const progress = (currentStep / 6) * 100;
+        progressFill.style.width = `${progress}%`;
+        
+        // Update step status
+        steps.forEach((step, index) => {
+            if (index + 1 <= currentStep) {
+                step.classList.add('active');
+            } else {
+                step.classList.remove('active');
+            }
+        });
+        
+        currentStep++;
+        
+        if (currentStep > 6) {
+            clearInterval(progressInterval);
+        }
+    }, 1000);
+}
+
+/**
+ * Show results section
+ */
+function showResults(tripData) {
+    hideAllSections();
     
-    // Display itinerary
-    displayItinerary(response.itinerary);
+    // Populate trip summary
+    displayTripSummary(tripData);
     
-    // Display recommendations
-    displayRecommendations(response.recommendations);
+    // Populate itinerary
+    displayItinerary(tripData.itinerary);
+    
+    // Populate recommendations
+    displayRecommendations(tripData.recommendations);
+    
+    // Populate pricing
+    displayPricing(tripData.pricing);
+    
+    // Show results
+    document.getElementById('results').classList.remove('hidden');
     
     // Scroll to results
-    resultsSection.scrollIntoView({ behavior: 'smooth' });
+    document.getElementById('results').scrollIntoView({ behavior: 'smooth' });
 }
 
 /**
  * Display trip summary
  */
-function displayTripSummary(response) {
-    tripSummary.innerHTML = `
-        <div class="summary-content">
-            <div class="summary-item">
-                <i class="fas fa-map-marker-alt"></i>
-                <span><strong>Destination:</strong> ${response.itinerary[0]?.destination || 'Unknown'}</span>
+function displayTripSummary(tripData) {
+    const summaryDiv = document.getElementById('tripSummary');
+    
+    summaryDiv.innerHTML = `
+        <h3>${tripData.destination} - ${tripData.duration} Days</h3>
+        <p>${tripData.startDate} • ${tripData.travelers} Traveler${tripData.travelers > 1 ? 's' : ''} • ${tripData.travelStyle} Style</p>
+        <div class="trip-highlights">
+            <div class="highlight">
+                <i class="fas fa-plane"></i>
+                <span>Flight: ${tripData.flight?.airline || 'TBD'}</span>
             </div>
-            <div class="summary-item">
-                <i class="fas fa-calendar"></i>
-                <span><strong>Duration:</strong> ${response.itinerary.length} days</span>
+            <div class="highlight">
+                <i class="fas fa-bed"></i>
+                <span>Hotel: ${tripData.hotel?.name || 'TBD'}</span>
             </div>
-            <div class="summary-item">
+            <div class="highlight">
                 <i class="fas fa-dollar-sign"></i>
-                <span><strong>Total Cost:</strong> $${response.total_cost.toFixed(2)}</span>
+                <span>Budget: $${tripData.pricing?.total || 0}</span>
             </div>
         </div>
     `;
@@ -319,227 +674,726 @@ function displayTripSummary(response) {
  * Display day-by-day itinerary
  */
 function displayItinerary(itinerary) {
-    itineraryContainer.innerHTML = '';
+    const container = document.getElementById('itineraryContainer');
     
-    itinerary.forEach(day => {
-        const dayCard = createDayCard(day);
-        itineraryContainer.appendChild(dayCard);
+    if (!itinerary || itinerary.length === 0) {
+        container.innerHTML = '<p>No itinerary available</p>';
+        return;
+    }
+    
+    container.innerHTML = itinerary.map((day, index) => `
+        <div class="day-card">
+            <div class="day-header">
+                <h4>Day ${index + 1}</h4>
+                <div class="day-weather">
+                    <i class="fas fa-sun"></i>
+                    <span>22°C, Sunny</span>
+                </div>
+            </div>
+            <div class="day-content">
+                ${day}
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Display AI recommendations
+ */
+function displayRecommendations(recommendations) {
+    const grid = document.getElementById('recommendationsGrid');
+    
+    if (!recommendations || recommendations.length === 0) {
+        grid.innerHTML = '<p>No recommendations available</p>';
+        return;
+    }
+    
+    grid.innerHTML = recommendations.map(rec => `
+        <div class="recommendation-card">
+            <div class="rec-icon">
+                <i class="fas fa-${getRecommendationIcon(rec.type)}"></i>
+            </div>
+            <h4>${rec.title}</h4>
+            <p>${rec.description}</p>
+            <div class="rec-meta">
+                <span class="rec-rating">
+                    <i class="fas fa-star"></i>
+                    ${rec.rating}
+                </span>
+                <span class="rec-price">$${rec.price}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+/**
+ * Get recommendation icon
+ */
+function getRecommendationIcon(type) {
+    const icons = {
+        'restaurant': 'utensils',
+        'activity': 'map-marked-alt',
+        'hotel': 'bed',
+        'transport': 'car',
+        'culture': 'landmark',
+        'shopping': 'shopping-bag'
+    };
+    return icons[type] || 'star';
+}
+
+/**
+ * Display pricing breakdown
+ */
+function displayPricing(pricing) {
+    const breakdown = document.getElementById('pricingBreakdown');
+    
+    if (!pricing) {
+        breakdown.innerHTML = '<p>Pricing information not available</p>';
+        return;
+    }
+    
+    breakdown.innerHTML = `
+        <div class="pricing-item">
+            <span>Flights</span>
+            <span>$${pricing.flights || 0}</span>
+        </div>
+        <div class="pricing-item">
+            <span>Accommodation</span>
+            <span>$${pricing.accommodation || 0}</span>
+        </div>
+        <div class="pricing-item">
+            <span>Activities</span>
+            <span>$${pricing.activities || 0}</span>
+        </div>
+        <div class="pricing-item">
+            <span>Transportation</span>
+            <span>$${pricing.transportation || 0}</span>
+        </div>
+        <div class="pricing-item total">
+            <span>Total</span>
+            <span>$${pricing.total || 0}</span>
+        </div>
+    `;
+}
+
+/**
+ * Initialize analytics dashboard
+ */
+function initializeAnalytics() {
+    const analyticsLink = document.querySelector('.nav-link[href="#analytics"]');
+    if (analyticsLink) {
+        analyticsLink.addEventListener('click', () => {
+            loadAnalyticsDashboard();
+        });
+    }
+    
+    // Initialize time range selector
+    const timeRangeSelect = document.getElementById('timeRange');
+    if (timeRangeSelect) {
+        timeRangeSelect.addEventListener('change', (e) => {
+            loadAnalyticsDashboard(e.target.value);
+        });
+    }
+    
+    // Initialize export button
+    const exportBtn = document.getElementById('exportReportBtn');
+    if (exportBtn) {
+        exportBtn.addEventListener('click', exportAnalyticsReport);
+    }
+}
+
+/**
+ * Load analytics dashboard
+ */
+async function loadAnalyticsDashboard(timeRange = 'month') {
+    try {
+        // Show analytics section
+        hideAllSections();
+        document.getElementById('analytics').classList.remove('hidden');
+        
+        // Load dashboard data
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/analytics/dashboard?time_range=${timeRange}`);
+        if (response.ok) {
+            const data = await response.json();
+            STATE.analyticsData = data;
+            
+            // Display metrics
+            displayMetrics(data.metrics);
+            
+            // Display charts
+            displayCharts(data.charts);
+            
+            // Load real-time metrics
+            loadRealTimeMetrics();
+        }
+    } catch (error) {
+        console.error('Failed to load analytics:', error);
+        showError('Failed to load analytics dashboard');
+    }
+}
+
+/**
+ * Display analytics metrics
+ */
+function displayMetrics(metrics) {
+    const grid = document.getElementById('metricsGrid');
+    
+    if (!metrics) return;
+    
+    let metricsHTML = '';
+    
+    Object.entries(metrics).forEach(([category, categoryMetrics]) => {
+        categoryMetrics.forEach(metric => {
+            metricsHTML += `
+                <div class="metric-card">
+                    <div class="metric-value">${metric.value}${metric.unit !== 'users' ? metric.unit : ''}</div>
+                    <div class="metric-label">${metric.name}</div>
+                    ${metric.change_percentage ? `
+                        <div class="metric-change ${metric.trend === 'up' ? 'positive' : 'negative'}">
+                            <i class="fas fa-arrow-${metric.trend === 'up' ? 'up' : 'down'}"></i>
+                            ${Math.abs(metric.change_percentage)}%
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+        });
+    });
+    
+    grid.innerHTML = metricsHTML;
+}
+
+/**
+ * Display analytics charts
+ */
+function displayCharts(charts) {
+    if (!charts) return;
+    
+    // User Growth Chart
+    if (charts.user_growth) {
+        const userGrowthData = JSON.parse(charts.user_growth);
+        Plotly.newPlot('userGrowthChart', userGrowthData.data, userGrowthData.layout);
+    }
+    
+    // Revenue Chart
+    if (charts.revenue) {
+        const revenueData = JSON.parse(charts.revenue);
+        Plotly.newPlot('revenueChart', revenueData.data, revenueData.layout);
+    }
+    
+    // Trip Planning Chart
+    if (charts.trip_planning) {
+        const tripPlanningData = JSON.parse(charts.trip_planning);
+        Plotly.newPlot('tripPlanningChart', tripPlanningData.data, tripPlanningData.layout);
+    }
+    
+    // Engagement Chart
+    if (charts.engagement) {
+        const engagementData = JSON.parse(charts.engagement);
+        Plotly.newPlot('engagementChart', engagementData.data, engagementData.layout);
+    }
+}
+
+/**
+ * Load real-time metrics
+ */
+async function loadRealTimeMetrics() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/analytics/real-time`);
+        if (response.ok) {
+            const data = await response.json();
+            displayRealTimeMetrics(data);
+        }
+    } catch (error) {
+        console.error('Failed to load real-time metrics:', error);
+    }
+    
+    // Update every 5 seconds
+    setTimeout(loadRealTimeMetrics, CONFIG.ANALYTICS_UPDATE_INTERVAL);
+}
+
+/**
+ * Display real-time metrics
+ */
+function displayRealTimeMetrics(data) {
+    const grid = document.getElementById('realTimeGrid');
+    
+    if (!data) return;
+    
+    grid.innerHTML = `
+        <div class="real-time-metric">
+            <div class="metric-icon">
+                <i class="fas fa-users"></i>
+            </div>
+            <div class="metric-info">
+                <div class="metric-value">${data.current_sessions}</div>
+                <div class="metric-label">Active Sessions</div>
+            </div>
+        </div>
+        <div class="real-time-metric">
+            <div class="metric-icon">
+                <i class="fas fa-user-friends"></i>
+            </div>
+            <div class="metric-info">
+                <div class="metric-value">${data.active_users}</div>
+                <div class="metric-label">Active Users</div>
+            </div>
+        </div>
+        <div class="real-time-metric">
+            <div class="metric-icon">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="metric-info">
+                <div class="metric-value">${data.api_requests_per_minute}</div>
+                <div class="metric-label">API Requests/min</div>
+            </div>
+        </div>
+        <div class="real-time-metric">
+            <div class="metric-icon">
+                <i class="fas fa-exclamation-triangle"></i>
+            </div>
+            <div class="metric-info">
+                <div class="metric-value">${data.error_count}</div>
+                <div class="metric-label">Errors</div>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * Export analytics report
+ */
+async function exportAnalyticsReport() {
+    if (!STATE.analyticsData) {
+        showError('No analytics data to export');
+        return;
+    }
+    
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/analytics/export`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                report_data: STATE.analyticsData,
+                format: 'csv'
+            })
+        });
+        
+        if (response.ok) {
+            const csvData = await response.text();
+            downloadCSV(csvData, 'analytics_report.csv');
+        }
+    } catch (error) {
+        console.error('Failed to export report:', error);
+        showError('Failed to export analytics report');
+    }
+}
+
+/**
+ * Download CSV file
+ */
+function downloadCSV(csvData, filename) {
+    const blob = new Blob([csvData], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Initialize payment system
+ */
+function initializePaymentSystem() {
+    // Initialize Stripe
+    if (typeof Stripe !== 'undefined') {
+        window.stripe = Stripe(CONFIG.STRIPE_PUBLISHABLE_KEY);
+    }
+    
+    // Initialize payment buttons
+    const bookNowBtn = document.getElementById('bookNowBtn');
+    if (bookNowBtn) {
+        bookNowBtn.addEventListener('click', showPaymentModal);
+    }
+    
+    // Initialize payment modal
+    initializePaymentModal();
+}
+
+/**
+ * Initialize payment modal
+ */
+function initializePaymentModal() {
+    const modal = document.getElementById('paymentModal');
+    const closeBtn = document.getElementById('closePaymentModal');
+    const cancelBtn = document.getElementById('cancelPaymentBtn');
+    const confirmBtn = document.getElementById('confirmPaymentBtn');
+    
+    if (closeBtn) {
+        closeBtn.addEventListener('click', hidePaymentModal);
+    }
+    
+    if (cancelBtn) {
+        cancelBtn.addEventListener('click', hidePaymentModal);
+    }
+    
+    if (confirmBtn) {
+        confirmBtn.addEventListener('click', processPayment);
+    }
+    
+    // Close modal on outside click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            hidePaymentModal();
+        }
     });
 }
 
 /**
- * Create a day card element
+ * Show payment modal
  */
-function createDayCard(day) {
-    const dayCard = document.createElement('div');
-    dayCard.className = 'day-card';
-    
-    // Weather icon mapping
-    const weatherIcon = getWeatherIcon(day.weather?.condition);
-    
-    dayCard.innerHTML = `
-        <div class="day-header">
-            <div class="day-title">Day ${day.day}</div>
-            <div class="day-date">${formatDate(day.date)}</div>
-        </div>
-        
-        <div class="weather-info">
-            <i class="${weatherIcon}"></i>
-            <div class="weather-details">
-                <strong>${day.weather?.condition || 'Unknown'}</strong>
-                ${day.weather?.temperature ? ` • ${day.weather.temperature}°C` : ''}
-                ${day.weather?.precipitation ? ` • ${day.weather.precipitation}% rain` : ''}
-            </div>
-        </div>
-        
-        ${createScheduleSection('Morning', day.morning, 'fas fa-sun')}
-        ${createScheduleSection('Afternoon', day.afternoon, 'fas fa-cloud-sun')}
-        ${createScheduleSection('Evening', day.evening, 'fas fa-moon')}
-        
-        ${day.travel_tips && day.travel_tips.length > 0 ? createTravelTips(day.travel_tips) : ''}
-    `;
-    
-    return dayCard;
-}
-
-/**
- * Create schedule section for a time period
- */
-function createScheduleSection(title, activities, icon) {
-    if (!activities || activities.length === 0) {
-        return '';
-    }
-    
-    const activitiesHtml = activities.map(activity => `
-        <div class="activity-item">
-            <div class="activity-name">${activity.name}</div>
-            <div class="activity-details">
-                ${activity.description || ''}
-                ${activity.duration ? ` • ${activity.duration}` : ''}
-            </div>
-            ${activity.price ? `<div class="activity-price">$${activity.price}</div>` : ''}
-        </div>
-    `).join('');
-    
-    return `
-        <div class="schedule-section">
-            <div class="schedule-title">
-                <i class="${icon}"></i>
-                ${title}
-            </div>
-            ${activitiesHtml}
-        </div>
-    `;
-}
-
-/**
- * Create travel tips section
- */
-function createTravelTips(tips) {
-    if (!tips || tips.length === 0) {
-        return '';
-    }
-    
-    const tipsHtml = tips.map(tip => `<li>${tip}</li>`).join('');
-    
-    return `
-        <div class="travel-tips">
-            <h4><i class="fas fa-exclamation-triangle"></i> Travel Tips</h4>
-            <ul>${tipsHtml}</ul>
-        </div>
-    `;
-}
-
-/**
- * Get weather icon based on condition
- */
-function getWeatherIcon(condition) {
-    if (!condition) return 'fas fa-question';
-    
-    const conditionLower = condition.toLowerCase();
-    
-    if (conditionLower.includes('sunny')) return 'fas fa-sun';
-    if (conditionLower.includes('cloudy')) return 'fas fa-cloud';
-    if (conditionLower.includes('rainy') || conditionLower.includes('rain')) return 'fas fa-cloud-rain';
-    if (conditionLower.includes('snow')) return 'fas fa-snowflake';
-    if (conditionLower.includes('storm')) return 'fas fa-bolt';
-    
-    return 'fas fa-cloud-sun';
-}
-
-/**
- * Display recommendations
- */
-function displayRecommendations(recommendations) {
-    if (!recommendations || recommendations.length === 0) {
-        recommendationsList.innerHTML = '<p>No specific recommendations at this time.</p>';
+function showPaymentModal() {
+    if (!STATE.currentTrip) {
+        showError('No trip selected for booking');
         return;
     }
     
-    recommendationsList.innerHTML = recommendations.map(rec => `
-        <div class="recommendation-item">
-            <i class="fas fa-lightbulb"></i>
-            ${rec}
+    // Populate payment items
+    populatePaymentItems();
+    
+    // Show modal
+    document.getElementById('paymentModal').classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+}
+
+/**
+ * Hide payment modal
+ */
+function hidePaymentModal() {
+    document.getElementById('paymentModal').classList.add('hidden');
+    document.body.style.overflow = 'auto';
+}
+
+/**
+ * Populate payment items
+ */
+function populatePaymentItems() {
+    const itemsContainer = document.getElementById('paymentItems');
+    const totalElement = document.getElementById('paymentTotal');
+    
+    if (!STATE.currentTrip || !STATE.currentTrip.pricing) return;
+    
+    const pricing = STATE.currentTrip.pricing;
+    let total = 0;
+    
+    const itemsHTML = `
+        <div class="payment-item">
+            <span>Flight to ${STATE.currentTrip.destination}</span>
+            <span>$${pricing.flights || 0}</span>
         </div>
-    `).join('');
+        <div class="payment-item">
+            <span>${STATE.currentTrip.duration} nights accommodation</span>
+            <span>$${pricing.accommodation || 0}</span>
+        </div>
+        <div class="payment-item">
+            <span>Activities & experiences</span>
+            <span>$${pricing.activities || 0}</span>
+        </div>
+        <div class="payment-item">
+            <span>Local transportation</span>
+            <span>$${pricing.transportation || 0}</span>
+        </div>
+    `;
+    
+    itemsContainer.innerHTML = itemsHTML;
+    totalElement.textContent = `$${pricing.total || 0}`;
+}
+
+/**
+ * Process payment
+ */
+async function processPayment() {
+    const confirmBtn = document.getElementById('confirmPaymentBtn');
+    const paymentMethod = document.querySelector('input[name="paymentMethod"]:checked').value;
+    
+    try {
+        confirmBtn.disabled = true;
+        confirmBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+        
+        if (paymentMethod === 'stripe') {
+            await processStripePayment();
+        } else if (paymentMethod === 'paypal') {
+            await processPayPalPayment();
+        }
+        
+    } catch (error) {
+        console.error('Payment error:', error);
+        showError('Payment failed. Please try again.');
+    } finally {
+        confirmBtn.disabled = false;
+        confirmBtn.innerHTML = '<i class="fas fa-lock"></i> Pay Securely';
+    }
+}
+
+/**
+ * Process Stripe payment
+ */
+async function processStripePayment() {
+    if (!window.stripe) {
+        throw new Error('Stripe not initialized');
+    }
+    
+    // Create payment intent
+    const response = await fetch(`${CONFIG.API_BASE_URL}/api/payment/create-intent`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+            amount: STATE.currentTrip.pricing.total * 100, // Convert to cents
+            currency: 'usd',
+            trip_id: STATE.currentTrip.id
+        })
+    });
+    
+    if (!response.ok) {
+        throw new Error('Failed to create payment intent');
+    }
+    
+    const { client_secret } = await response.json();
+    
+    // Confirm payment
+    const result = await window.stripe.confirmCardPayment(client_secret, {
+        payment_method: {
+            card: {
+                // In a real app, you'd collect card details here
+                number: '4242424242424242',
+                exp_month: 12,
+                exp_year: 2025,
+                cvc: '123'
+            }
+        }
+    });
+    
+    if (result.error) {
+        throw new Error(result.error.message);
+    }
+    
+    // Payment successful
+    showSuccess('Payment successful! Your trip has been booked.');
+    hidePaymentModal();
+}
+
+/**
+ * Process PayPal payment
+ */
+async function processPayPalPayment() {
+    // In a real app, this would redirect to PayPal
+    showError('PayPal integration not implemented in demo');
+}
+
+/**
+ * Initialize event listeners
+ */
+function initializeEventListeners() {
+    // Watch demo button
+    const watchDemoBtn = document.getElementById('watchDemoBtn');
+    if (watchDemoBtn) {
+        watchDemoBtn.addEventListener('click', () => {
+            alert('Demo video would play here');
+        });
+    }
+    
+    // Export buttons
+    const exportPdfBtn = document.getElementById('exportPdfBtn');
+    if (exportPdfBtn) {
+        exportPdfBtn.addEventListener('click', exportToPDF);
+    }
+    
+    const exportCalendarBtn = document.getElementById('exportCalendarBtn');
+    if (exportCalendarBtn) {
+        exportCalendarBtn.addEventListener('click', exportToCalendar);
+    }
+    
+    const shareItineraryBtn = document.getElementById('shareItineraryBtn');
+    if (shareItineraryBtn) {
+        shareItineraryBtn.addEventListener('click', shareItinerary);
+    }
+    
+    // Save preferences
+    const savePreferencesBtn = document.getElementById('savePreferencesBtn');
+    if (savePreferencesBtn) {
+        savePreferencesBtn.addEventListener('click', saveUserPreferences);
+    }
+}
+
+/**
+ * Export to PDF
+ */
+function exportToPDF() {
+    // In a real app, this would generate and download a PDF
+    alert('PDF export would generate here');
+}
+
+/**
+ * Export to Calendar
+ */
+function exportToCalendar() {
+    if (!STATE.currentTrip) return;
+    
+    const trip = STATE.currentTrip;
+    const startDate = new Date(trip.startDate);
+    const endDate = new Date(startDate);
+    endDate.setDate(startDate.getDate() + trip.duration);
+    
+    const icsContent = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'BEGIN:VEVENT',
+        `SUMMARY:Trip to ${trip.destination}`,
+        `DESCRIPTION:${trip.duration} day trip to ${trip.destination}`,
+        `DTSTART:${startDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+        `DTEND:${endDate.toISOString().replace(/[-:]/g, '').split('.')[0]}Z`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+    ].join('\r\n');
+    
+    const blob = new Blob([icsContent], { type: 'text/calendar' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `trip_${trip.destination.toLowerCase()}.ics`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+/**
+ * Share itinerary
+ */
+function shareItinerary() {
+    if (navigator.share) {
+        navigator.share({
+            title: `Trip to ${STATE.currentTrip?.destination}`,
+            text: `Check out my ${STATE.currentTrip?.duration} day trip to ${STATE.currentTrip?.destination}!`,
+            url: window.location.href
+        });
+    } else {
+        // Fallback to copying to clipboard
+        const shareText = `Trip to ${STATE.currentTrip?.destination}: ${window.location.href}`;
+        navigator.clipboard.writeText(shareText).then(() => {
+            showSuccess('Itinerary link copied to clipboard!');
+        });
+    }
+}
+
+/**
+ * Save user preferences
+ */
+async function saveUserPreferences() {
+    const form = document.getElementById('advancedTravelForm');
+    const formData = new FormData(form);
+    
+    const preferences = {
+        travelStyle: formData.get('travelStyle'),
+        preferences: Array.from(formData.getAll('preferences')),
+        accommodationType: formData.get('accommodationType'),
+        transportation: formData.get('transportation'),
+        accessibility: formData.get('accessibility'),
+        language: formData.get('language')
+    };
+    
+    try {
+        // In a real app, this would save to backend
+        localStorage.setItem('userPreferences', JSON.stringify(preferences));
+        showSuccess('Preferences saved successfully!');
+    } catch (error) {
+        console.error('Failed to save preferences:', error);
+        showError('Failed to save preferences');
+    }
+}
+
+/**
+ * Set default date to tomorrow
+ */
+function setDefaultDate() {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const startDateInput = document.getElementById('startDate');
+    if (startDateInput) {
+        startDateInput.value = tomorrow.toISOString().split('T')[0];
+    }
+}
+
+/**
+ * Check API health
+ */
+async function checkAPIHealth() {
+    try {
+        const response = await fetch(`${CONFIG.API_BASE_URL}/api/health`);
+        if (response.ok) {
+            console.log('✅ API is healthy');
+        } else {
+            console.warn('⚠️ API health check failed');
+        }
+    } catch (error) {
+        console.error('❌ API health check failed:', error);
+    }
+}
+
+/**
+ * Hide all sections
+ */
+function hideAllSections() {
+    const sections = ['loading', 'results', 'analytics'];
+    sections.forEach(sectionId => {
+        const section = document.getElementById(sectionId);
+        if (section) {
+            section.classList.add('hidden');
+        }
+    });
 }
 
 /**
  * Show error message
  */
 function showError(message) {
-    hideAllSections();
-    errorSection.style.display = 'block';
-    errorMessage.textContent = message;
-    
-    // Reset form button
-    submitBtn.disabled = false;
-    submitBtn.textContent = 'Plan My Trip';
+    // In a real app, this would show a proper error notification
+    alert(`Error: ${message}`);
 }
 
 /**
- * Reset the form and show planning form
+ * Show success message
  */
-function resetForm() {
-    // Reset form
-    travelForm.reset();
-    setDefaultDate();
-    
-    // Clear any error states
-    const inputs = travelForm.querySelectorAll('input, select');
-    inputs.forEach(input => {
-        input.classList.remove('error');
-        const errorElement = input.parentNode.querySelector('.field-error');
-        if (errorElement) {
-            errorElement.remove();
-        }
-    });
-    
-    // Clear preference selections
-    const preferenceItems = document.querySelectorAll('.preference-item');
-    preferenceItems.forEach(item => {
-        item.classList.remove('selected');
-        const checkbox = item.querySelector('input[type="checkbox"]');
-        checkbox.checked = false;
-    });
-    
-    // Hide all sections and show form
-    hideAllSections();
-    
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+function showSuccess(message) {
+    // In a real app, this would show a proper success notification
+    alert(`Success: ${message}`);
 }
 
 /**
- * Format date for display
+ * Debounce function
  */
-function formatDate(dateString) {
-    if (!dateString) return 'Unknown';
-    
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', {
-        weekday: 'long',
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric'
-    });
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
 }
 
-/**
- * Export itinerary to PDF (placeholder for future implementation)
- */
-function exportItinerary() {
-    // This would integrate with a PDF library like jsPDF
-    alert('PDF export feature coming soon!');
-}
-
-/**
- * Share itinerary (placeholder for future implementation)
- */
-function shareItinerary() {
-    // This would integrate with Web Share API or social media
-    if (navigator.share) {
-        navigator.share({
-            title: 'My Travel Itinerary',
-            text: 'Check out my amazing travel plan!',
-            url: window.location.href
-        });
-    } else {
-        alert('Sharing feature coming soon!');
-    }
-}
-
-// Add some utility functions for debugging
-window.debugItinerary = function() {
-    console.log('Current Itinerary:', currentItinerary);
-};
-
-window.testAPI = async function() {
-    try {
-        const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.health}`);
-        const data = await response.json();
-        console.log('API Health Check:', data);
-    } catch (error) {
-        console.error('API Test Failed:', error);
-    }
+// Export functions for global access
+window.AITravelAgent = {
+    sendChatMessage,
+    planTrip,
+    loadAnalyticsDashboard,
+    showPaymentModal,
+    exportToPDF,
+    exportToCalendar,
+    shareItinerary
 };
