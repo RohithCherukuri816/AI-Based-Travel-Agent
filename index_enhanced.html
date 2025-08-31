@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Planning Agent - Next Level</title>
+    <link rel="stylesheet" href="style_enhanced.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://js.stripe.com/v3/"></script>
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <i class="fas fa-plane-departure"></i>
+                <span>AI Travel Agent</span>
+            </div>
+            <div class="nav-menu">
+                <a href="#home" class="nav-link active">Home</a>
+                <a href="#features" class="nav-link">Features</a>
+                <a href="#pricing" class="nav-link">Pricing</a>
+                <a href="#analytics" class="nav-link">Analytics</a>
+                <a href="#chat" class="nav-link">AI Chat</a>
+            </div>
+            <div class="nav-actions">
+                <button class="btn btn-outline" id="loginBtn">Login</button>
+                <button class="btn btn-primary" id="signupBtn">Sign Up</button>
+            </div>
+            <div class="nav-toggle" id="navToggle">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-container">
+            <div class="hero-content">
+                <h1 class="hero-title">
+                    Plan Your Dream Trip with
+                    <span class="gradient-text">AI Intelligence</span>
+                </h1>
+                <p class="hero-subtitle">
+                    Experience the future of travel planning with our advanced AI agents. 
+                    Get personalized itineraries, real-time pricing, and intelligent recommendations in seconds.
+                </p>
+                <div class="hero-actions">
+                    <button class="btn btn-primary btn-large" id="startPlanningBtn">
+                        <i class="fas fa-magic"></i>
+                        Start Planning
+                    </button>
+                    <button class="btn btn-outline btn-large" id="watchDemoBtn">
+                        <i class="fas fa-play"></i>
+                        Watch Demo
+                    </button>
+                </div>
+                <div class="hero-stats">
+                    <div class="stat-item">
+                        <div class="stat-number">10K+</div>
+                        <div class="stat-label">Trips Planned</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">98%</div>
+                        <div class="stat-label">Satisfaction</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number">24/7</div>
+                        <div class="stat-label">AI Support</div>
+                    </div>
+                </div>
+            </div>
+            <div class="hero-visual">
+                <div class="floating-card card-1">
+                    <i class="fas fa-map-marked-alt"></i>
+                    <span>Smart Routing</span>
+                </div>
+                <div class="floating-card card-2">
+                    <i class="fas fa-star"></i>
+                    <span>AI Recommendations</span>
+                </div>
+                <div class="floating-card card-3">
+                    <i class="fas fa-clock"></i>
+                    <span>Real-time Updates</span>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- AI Chat Interface -->
+    <section id="chat" class="chat-section">
+        <div class="chat-container">
+            <div class="chat-header">
+                <h2><i class="fas fa-robot"></i> AI Travel Assistant</h2>
+                <p>Chat with our AI to plan your perfect trip</p>
+            </div>
+            <div class="chat-interface">
+                <div class="chat-messages" id="chatMessages">
+                    <div class="message ai-message">
+                        <div class="message-avatar">
+                            <i class="fas fa-robot"></i>
+                        </div>
+                        <div class="message-content">
+                            <p>Hello! I'm your AI travel assistant. I can help you plan amazing trips, find the best deals, and discover incredible destinations. What would you like to know about?</p>
+                            <div class="message-suggestions">
+                                <button class="suggestion-btn">Plan a trip</button>
+                                <button class="suggestion-btn">Ask travel questions</button>
+                                <button class="suggestion-btn">Get destination info</button>
+                                <button class="suggestion-btn">Check weather</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-input">
+                    <div class="input-wrapper">
+                        <input type="text" id="chatInput" placeholder="Type your message here..." maxlength="500">
+                        <button id="sendMessageBtn" class="send-btn">
+                            <i class="fas fa-paper-plane"></i>
+                        </button>
+                    </div>
+                    <div class="chat-features">
+                        <button class="feature-btn" title="Voice Input">
+                            <i class="fas fa-microphone"></i>
+                        </button>
+                        <button class="feature-btn" title="Attach File">
+                            <i class="fas fa-paperclip"></i>
+                        </button>
+                        <button class="feature-btn" title="Clear Chat">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Advanced Trip Planning Form -->
+    <section id="planning" class="planning-section">
+        <div class="planning-container">
+            <div class="planning-header">
+                <h2>Advanced Trip Planning</h2>
+                <p>Get a complete, personalized itinerary in seconds</p>
+            </div>
+            <form id="advancedTravelForm" class="advanced-form">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label for="destination">
+                            <i class="fas fa-globe"></i>
+                            Destination
+                        </label>
+                        <input type="text" id="destination" name="destination" required placeholder="e.g., London, Tokyo, Paris">
+                        <div class="destination-suggestions" id="destinationSuggestions"></div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="startDate">
+                            <i class="fas fa-calendar"></i>
+                            Start Date
+                        </label>
+                        <input type="date" id="startDate" name="startDate" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="duration">
+                            <i class="fas fa-clock"></i>
+                            Duration
+                        </label>
+                        <select id="duration" name="duration" required>
+                            <option value="">Select duration</option>
+                            <option value="1">1 day</option>
+                            <option value="2">2 days</option>
+                            <option value="3">3 days</option>
+                            <option value="4">4 days</option>
+                            <option value="5">5 days</option>
+                            <option value="6">6 days</option>
+                            <option value="7">1 week</option>
+                            <option value="14">2 weeks</option>
+                            <option value="21">3 weeks</option>
+                            <option value="30">1 month</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="budget">
+                            <i class="fas fa-dollar-sign"></i>
+                            Budget Range
+                        </label>
+                        <div class="budget-range">
+                            <input type="number" id="budgetMin" name="budgetMin" placeholder="Min" min="0">
+                            <span>to</span>
+                            <input type="number" id="budgetMax" name="budgetMax" placeholder="Max" min="0">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="travelers">
+                            <i class="fas fa-users"></i>
+                            Travelers
+                        </label>
+                        <div class="travelers-input">
+                            <button type="button" class="traveler-btn" data-action="decrease">-</button>
+                            <input type="number" id="travelers" name="travelers" value="1" min="1" max="10" readonly>
+                            <button type="button" class="traveler-btn" data-action="increase">+</button>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="travelStyle">
+                            <i class="fas fa-palette"></i>
+                            Travel Style
+                        </label>
+                        <select id="travelStyle" name="travelStyle" required>
+                            <option value="">Select style</option>
+                            <option value="luxury">Luxury</option>
+                            <option value="budget">Budget</option>
+                            <option value="adventure">Adventure</option>
+                            <option value="cultural">Cultural</option>
+                            <option value="relaxation">Relaxation</option>
+                            <option value="family">Family-friendly</option>
+                            <option value="romantic">Romantic</option>
+                            <option value="business">Business</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="preferences-section">
+                    <h3>Preferences & Interests</h3>
+                    <div class="preferences-grid">
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="culture">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-landmark"></i>
+                            Culture & History
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="food">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-utensils"></i>
+                            Food & Dining
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="nature">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-mountain"></i>
+                            Nature & Outdoors
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="shopping">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-shopping-bag"></i>
+                            Shopping
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="nightlife">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-moon"></i>
+                            Nightlife
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="adventure">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-hiking"></i>
+                            Adventure Sports
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="wellness">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-spa"></i>
+                            Wellness & Spa
+                        </label>
+                        <label class="preference-item">
+                            <input type="checkbox" name="preferences" value="photography">
+                            <span class="checkmark"></span>
+                            <i class="fas fa-camera"></i>
+                            Photography
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="advanced-options">
+                    <h3>Advanced Options</h3>
+                    <div class="advanced-grid">
+                        <div class="form-group">
+                            <label for="accommodationType">
+                                <i class="fas fa-bed"></i>
+                                Accommodation Type
+                            </label>
+                            <select id="accommodationType" name="accommodationType">
+                                <option value="">Any</option>
+                                <option value="hotel">Hotel</option>
+                                <option value="resort">Resort</option>
+                                <option value="apartment">Apartment</option>
+                                <option value="hostel">Hostel</option>
+                                <option value="villa">Villa</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="transportation">
+                                <i class="fas fa-car"></i>
+                                Transportation
+                            </label>
+                            <select id="transportation" name="transportation">
+                                <option value="">Any</option>
+                                <option value="public">Public Transport</option>
+                                <option value="rental">Car Rental</option>
+                                <option value="walking">Walking</option>
+                                <option value="bicycle">Bicycle</option>
+                                <option value="taxi">Taxi/Rideshare</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="accessibility">
+                                <i class="fas fa-wheelchair"></i>
+                                Accessibility
+                            </label>
+                            <select id="accessibility" name="accessibility">
+                                <option value="">Standard</option>
+                                <option value="wheelchair">Wheelchair Accessible</option>
+                                <option value="hearing">Hearing Impaired</option>
+                                <option value="visual">Visually Impaired</option>
+                                <option value="mobility">Limited Mobility</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="language">
+                                <i class="fas fa-language"></i>
+                                Language
+                            </label>
+                            <select id="language" name="language">
+                                <option value="en">English</option>
+                                <option value="es">Spanish</option>
+                                <option value="fr">French</option>
+                                <option value="de">German</option>
+                                <option value="it">Italian</option>
+                                <option value="pt">Portuguese</option>
+                                <option value="ja">Japanese</option>
+                                <option value="ko">Korean</option>
+                                <option value="zh">Chinese</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary btn-large" id="planTripBtn">
+                        <i class="fas fa-magic"></i>
+                        Plan My Trip
+                    </button>
+                    <button type="button" class="btn btn-outline" id="savePreferencesBtn">
+                        <i class="fas fa-save"></i>
+                        Save Preferences
+                    </button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Loading Section -->
+    <section id="loading" class="loading-section hidden">
+        <div class="loading-container">
+            <div class="loading-animation">
+                <div class="loading-spinner"></div>
+                <div class="loading-pulse"></div>
+            </div>
+            <h3>AI Agents Working...</h3>
+            <p>Our intelligent agents are crafting your perfect itinerary</p>
+            <div class="loading-progress">
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-steps">
+                    <div class="step active" data-step="1">
+                        <i class="fas fa-user"></i>
+                        <span>Analyzing Preferences</span>
+                    </div>
+                    <div class="step" data-step="2">
+                        <i class="fas fa-plane"></i>
+                        <span>Finding Flights</span>
+                    </div>
+                    <div class="step" data-step="3">
+                        <i class="fas fa-bed"></i>
+                        <span>Selecting Hotels</span>
+                    </div>
+                    <div class="step" data-step="4">
+                        <i class="fas fa-map-marked-alt"></i>
+                        <span>Planning Activities</span>
+                    </div>
+                    <div class="step" data-step="5">
+                        <i class="fas fa-calculator"></i>
+                        <span>Calculating Budget</span>
+                    </div>
+                    <div class="step" data-step="6">
+                        <i class="fas fa-calendar-check"></i>
+                        <span>Creating Itinerary</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Results Section -->
+    <section id="results" class="results-section hidden">
+        <div class="results-container">
+            <div class="results-header">
+                <h2>Your Personalized Travel Itinerary</h2>
+                <div class="results-actions">
+                    <button class="btn btn-outline" id="exportPdfBtn">
+                        <i class="fas fa-file-pdf"></i>
+                        Export PDF
+                    </button>
+                    <button class="btn btn-outline" id="exportCalendarBtn">
+                        <i class="fas fa-calendar-plus"></i>
+                        Add to Calendar
+                    </button>
+                    <button class="btn btn-outline" id="shareItineraryBtn">
+                        <i class="fas fa-share-alt"></i>
+                        Share
+                    </button>
+                    <button class="btn btn-primary" id="bookNowBtn">
+                        <i class="fas fa-credit-card"></i>
+                        Book Now
+                    </button>
+                </div>
+            </div>
+            
+            <div class="trip-summary" id="tripSummary">
+                <!-- Trip summary will be populated here -->
+            </div>
+            
+            <div class="itinerary-container" id="itineraryContainer">
+                <!-- Day-by-day itinerary will be populated here -->
+            </div>
+            
+            <div class="recommendations-section">
+                <h3>AI Recommendations</h3>
+                <div class="recommendations-grid" id="recommendationsGrid">
+                    <!-- Recommendations will be populated here -->
+                </div>
+            </div>
+            
+            <div class="pricing-section">
+                <h3>Pricing & Booking</h3>
+                <div class="pricing-breakdown" id="pricingBreakdown">
+                    <!-- Pricing breakdown will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Analytics Dashboard -->
+    <section id="analytics" class="analytics-section hidden">
+        <div class="analytics-container">
+            <div class="analytics-header">
+                <h2>Business Analytics Dashboard</h2>
+                <div class="analytics-controls">
+                    <select id="timeRange" class="time-range-select">
+                        <option value="day">Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month" selected>This Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                    </select>
+                    <button class="btn btn-outline" id="exportReportBtn">
+                        <i class="fas fa-download"></i>
+                        Export Report
+                    </button>
+                </div>
+            </div>
+            
+            <div class="metrics-grid" id="metricsGrid">
+                <!-- Key metrics will be populated here -->
+            </div>
+            
+            <div class="charts-container">
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>User Growth</h3>
+                        <div id="userGrowthChart" class="chart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>Revenue Growth</h3>
+                        <div id="revenueChart" class="chart"></div>
+                    </div>
+                </div>
+                <div class="chart-row">
+                    <div class="chart-card">
+                        <h3>Trip Planning Analytics</h3>
+                        <div id="tripPlanningChart" class="chart"></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>User Engagement</h3>
+                        <div id="engagementChart" class="chart"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="real-time-metrics">
+                <h3>Real-time System Metrics</h3>
+                <div class="real-time-grid" id="realTimeGrid">
+                    <!-- Real-time metrics will be populated here -->
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Payment Modal -->
+    <div id="paymentModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>Complete Your Booking</h3>
+                <button class="modal-close" id="closePaymentModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="payment-summary">
+                    <h4>Booking Summary</h4>
+                    <div class="payment-items" id="paymentItems">
+                        <!-- Payment items will be populated here -->
+                    </div>
+                    <div class="payment-total">
+                        <span>Total:</span>
+                        <span id="paymentTotal">$0.00</span>
+                    </div>
+                </div>
+                
+                <div class="payment-methods">
+                    <h4>Payment Method</h4>
+                    <div class="payment-options">
+                        <label class="payment-option">
+                            <input type="radio" name="paymentMethod" value="stripe" checked>
+                            <span class="radio-custom"></span>
+                            <i class="fab fa-cc-stripe"></i>
+                            Credit Card
+                        </label>
+                        <label class="payment-option">
+                            <input type="radio" name="paymentMethod" value="paypal">
+                            <span class="radio-custom"></span>
+                            <i class="fab fa-paypal"></i>
+                            PayPal
+                        </label>
+                    </div>
+                </div>
+                
+                <div class="payment-form" id="paymentForm">
+                    <!-- Payment form will be populated here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="cancelPaymentBtn">Cancel</button>
+                <button class="btn btn-primary" id="confirmPaymentBtn">
+                    <i class="fas fa-lock"></i>
+                    Pay Securely
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features Section -->
+    <section id="features" class="features-section">
+        <div class="features-container">
+            <div class="features-header">
+                <h2>Next-Level Features</h2>
+                <p>Discover what makes our AI Travel Agent revolutionary</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-brain"></i>
+                    </div>
+                    <h3>Multi-Agent AI System</h3>
+                    <p>Eight specialized AI agents working together to create the perfect travel plan</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-comments"></i>
+                    </div>
+                    <h3>Natural Language Chat</h3>
+                    <p>Plan your trip through natural conversation with our intelligent AI assistant</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <h3>Advanced Analytics</h3>
+                    <p>Comprehensive business intelligence and user behavior insights</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-credit-card"></i>
+                    </div>
+                    <h3>Secure Payments</h3>
+                    <p>Integrated payment processing with Stripe and PayPal</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-mobile-alt"></i>
+                    </div>
+                    <h3>Progressive Web App</h3>
+                    <p>Mobile-responsive design that works seamlessly across all devices</p>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon">
+                        <i class="fas fa-sync-alt"></i>
+                    </div>
+                    <h3>Real-time Updates</h3>
+                    <p>Live pricing, availability, and weather information</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Pricing Section -->
+    <section id="pricing" class="pricing-section">
+        <div class="pricing-container">
+            <div class="pricing-header">
+                <h2>Choose Your Plan</h2>
+                <p>Start free and upgrade as you grow</p>
+            </div>
+            <div class="pricing-grid">
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Free</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">0</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> 3 trips per month</li>
+                        <li><i class="fas fa-check"></i> Basic AI planning</li>
+                        <li><i class="fas fa-check"></i> Standard itineraries</li>
+                        <li><i class="fas fa-check"></i> Email support</li>
+                    </ul>
+                    <button class="btn btn-outline btn-full">Get Started</button>
+                </div>
+                
+                <div class="pricing-card featured">
+                    <div class="pricing-badge">Most Popular</div>
+                    <div class="pricing-header">
+                        <h3>Premium</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">19</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Unlimited trips</li>
+                        <li><i class="fas fa-check"></i> Advanced AI planning</li>
+                        <li><i class="fas fa-check"></i> Premium itineraries</li>
+                        <li><i class="fas fa-check"></i> Priority support</li>
+                        <li><i class="fas fa-check"></i> Export options</li>
+                        <li><i class="fas fa-check"></i> Real-time updates</li>
+                    </ul>
+                    <button class="btn btn-primary btn-full">Start Premium</button>
+                </div>
+                
+                <div class="pricing-card">
+                    <div class="pricing-header">
+                        <h3>Enterprise</h3>
+                        <div class="price">
+                            <span class="currency">$</span>
+                            <span class="amount">99</span>
+                            <span class="period">/month</span>
+                        </div>
+                    </div>
+                    <ul class="pricing-features">
+                        <li><i class="fas fa-check"></i> Everything in Premium</li>
+                        <li><i class="fas fa-check"></i> Team collaboration</li>
+                        <li><i class="fas fa-check"></i> Custom integrations</li>
+                        <li><i class="fas fa-check"></i> Dedicated support</li>
+                        <li><i class="fas fa-check"></i> Advanced analytics</li>
+                        <li><i class="fas fa-check"></i> API access</li>
+                    </ul>
+                    <button class="btn btn-outline btn-full">Contact Sales</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="footer-container">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <h4>AI Travel Agent</h4>
+                    <p>Revolutionizing travel planning with artificial intelligence</p>
+                    <div class="social-links">
+                        <a href="#"><i class="fab fa-twitter"></i></a>
+                        <a href="#"><i class="fab fa-facebook"></i></a>
+                        <a href="#"><i class="fab fa-instagram"></i></a>
+                        <a href="#"><i class="fab fa-linkedin"></i></a>
+                    </div>
+                </div>
+                <div class="footer-section">
+                    <h4>Product</h4>
+                    <ul>
+                        <li><a href="#features">Features</a></li>
+                        <li><a href="#pricing">Pricing</a></li>
+                        <li><a href="#analytics">Analytics</a></li>
+                        <li><a href="#chat">AI Chat</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Company</h4>
+                    <ul>
+                        <li><a href="#about">About</a></li>
+                        <li><a href="#careers">Careers</a></li>
+                        <li><a href="#press">Press</a></li>
+                        <li><a href="#contact">Contact</a></li>
+                    </ul>
+                </div>
+                <div class="footer-section">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#help">Help Center</a></li>
+                        <li><a href="#docs">Documentation</a></li>
+                        <li><a href="#api">API Reference</a></li>
+                        <li><a href="#status">System Status</a></li>
+                    </ul>
+                </div>
+            </div>
+            <div class="footer-bottom">
+                <p>&copy; 2024 AI Travel Agent. All rights reserved.</p>
+                <div class="footer-links">
+                    <a href="#privacy">Privacy Policy</a>
+                    <a href="#terms">Terms of Service</a>
+                    <a href="#cookies">Cookie Policy</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="script_enhanced.js"></script>
+</body>
+</html>

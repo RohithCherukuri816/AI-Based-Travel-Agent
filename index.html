@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Travel Planning Agent</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1><i class="fas fa-plane-departure"></i> AI Travel Planning Agent</h1>
+                <p>Your personal AI travel companion for creating perfect itineraries</p>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Travel Planning Form -->
+            <section class="planning-form-section">
+                <div class="form-card">
+                    <h2><i class="fas fa-map-marked-alt"></i> Plan Your Trip</h2>
+                    <form id="travelForm" class="travel-form">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="destination">
+                                    <i class="fas fa-globe"></i> Destination
+                                </label>
+                                <input type="text" id="destination" name="destination" required 
+                                       placeholder="e.g., London, Tokyo, Paris">
+                            </div>
+                            <div class="form-group">
+                                <label for="startDate">
+                                    <i class="fas fa-calendar"></i> Start Date
+                                </label>
+                                <input type="date" id="startDate" name="startDate" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="duration">
+                                    <i class="fas fa-clock"></i> Duration (Days)
+                                </label>
+                                <select id="duration" name="duration" required>
+                                    <option value="">Select duration</option>
+                                    <option value="3">3 Days</option>
+                                    <option value="5">5 Days</option>
+                                    <option value="7">1 Week</option>
+                                    <option value="10">10 Days</option>
+                                    <option value="14">2 Weeks</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="budget">
+                                    <i class="fas fa-dollar-sign"></i> Total Budget ($)
+                                </label>
+                                <input type="number" id="budget" name="budget" required 
+                                       placeholder="e.g., 3000" min="500">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="travelers">
+                                    <i class="fas fa-users"></i> Number of Travelers
+                                </label>
+                                <select id="travelers" name="travelers" required>
+                                    <option value="1">1 Person</option>
+                                    <option value="2">2 People</option>
+                                    <option value="3">3 People</option>
+                                    <option value="4">4 People</option>
+                                    <option value="5">5+ People</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="travelStyle">
+                                    <i class="fas fa-star"></i> Travel Style
+                                </label>
+                                <select id="travelStyle" name="travelStyle" required>
+                                    <option value="balanced">Balanced</option>
+                                    <option value="luxury">Luxury</option>
+                                    <option value="budget">Budget</option>
+                                    <option value="adventure">Adventure</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="preferences">
+                                <i class="fas fa-heart"></i> Preferences & Interests
+                            </label>
+                            <div class="preferences-grid">
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="culture">
+                                    <span class="checkmark"></span>
+                                    Culture & History
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="food">
+                                    <span class="checkmark"></span>
+                                    Food & Dining
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="adventure">
+                                    <span class="checkmark"></span>
+                                    Adventure & Sports
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="shopping">
+                                    <span class="checkmark"></span>
+                                    Shopping
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="nature">
+                                    <span class="checkmark"></span>
+                                    Nature & Outdoors
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="nightlife">
+                                    <span class="checkmark"></span>
+                                    Nightlife
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="relaxation">
+                                    <span class="checkmark"></span>
+                                    Relaxation & Spa
+                                </label>
+                                <label class="preference-item">
+                                    <input type="checkbox" name="preferences" value="photography">
+                                    <span class="checkmark"></span>
+                                    Photography
+                                </label>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="submit-btn" id="submitBtn">
+                            <i class="fas fa-magic"></i> Plan My Trip
+                        </button>
+                    </form>
+                </div>
+            </section>
+
+            <!-- Loading State -->
+            <section class="loading-section" id="loadingSection" style="display: none;">
+                <div class="loading-card">
+                    <div class="loading-spinner">
+                        <i class="fas fa-plane"></i>
+                    </div>
+                    <h3>AI Agents are planning your perfect trip...</h3>
+                    <p>Our multi-agent system is analyzing flights, hotels, activities, and weather to create your personalized itinerary.</p>
+                    <div class="agent-status">
+                        <div class="agent-item">
+                            <i class="fas fa-user-check"></i>
+                            <span>User Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-plane"></i>
+                            <span>Flight Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-hotel"></i>
+                            <span>Hotel Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-hiking"></i>
+                            <span>Activity Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-cloud-sun"></i>
+                            <span>Weather Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-calculator"></i>
+                            <span>Budget Agent</span>
+                        </div>
+                        <div class="agent-item">
+                            <i class="fas fa-calendar-check"></i>
+                            <span>Planner Agent</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Results Section -->
+            <section class="results-section" id="resultsSection" style="display: none;">
+                <div class="results-header">
+                    <h2><i class="fas fa-check-circle"></i> Your Travel Itinerary</h2>
+                    <div class="trip-summary" id="tripSummary"></div>
+                </div>
+
+                <div class="itinerary-container" id="itineraryContainer"></div>
+
+                <div class="recommendations-section">
+                    <h3><i class="fas fa-lightbulb"></i> AI Recommendations</h3>
+                    <div class="recommendations-list" id="recommendationsList"></div>
+                </div>
+
+                <button class="new-trip-btn" onclick="resetForm()">
+                    <i class="fas fa-plus"></i> Plan Another Trip
+                </button>
+            </section>
+
+            <!-- Error Section -->
+            <section class="error-section" id="errorSection" style="display: none;">
+                <div class="error-card">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <h3>Oops! Something went wrong</h3>
+                    <p id="errorMessage"></p>
+                    <button class="retry-btn" onclick="resetForm()">
+                        <i class="fas fa-redo"></i> Try Again
+                    </button>
+                </div>
+            </section>
+        </main>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <p>&copy; 2024 AI Travel Planning Agent. Powered by LangGraph & FastAPI.</p>
+        </footer>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

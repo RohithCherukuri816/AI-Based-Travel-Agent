@@ -1,0 +1,226 @@
+[
+  {
+    "location": "London, UK",
+    "currentWeather": {
+      "temperature": 18,
+      "condition": "Partly Cloudy",
+      "humidity": 65,
+      "windSpeed": 12,
+      "visibility": "Good"
+    },
+    "forecast": [
+      {
+        "date": "2024-06-15",
+        "high": 22,
+        "low": 15,
+        "condition": "Sunny",
+        "precipitation": 0
+      },
+      {
+        "date": "2024-06-16",
+        "high": 20,
+        "low": 14,
+        "condition": "Rainy",
+        "precipitation": 80
+      },
+      {
+        "date": "2024-06-17",
+        "high": 19,
+        "low": 13,
+        "condition": "Cloudy",
+        "precipitation": 30
+      }
+    ],
+    "events": [
+      {
+        "name": "Wimbledon Tennis Championships",
+        "date": "2024-06-15",
+        "type": "Sports",
+        "crowdLevel": "Very High",
+        "impact": "High traffic, hotel prices increased"
+      },
+      {
+        "name": "London Fashion Week",
+        "date": "2024-06-20",
+        "type": "Fashion",
+        "crowdLevel": "High",
+        "impact": "Restaurants busy, some areas closed"
+      }
+    ],
+    "safetyAlerts": [
+      {
+        "type": "Transport",
+        "message": "Tube strike planned for June 16-17",
+        "severity": "Medium"
+      }
+    ]
+  },
+  {
+    "location": "Tokyo, Japan",
+    "currentWeather": {
+      "temperature": 25,
+      "condition": "Sunny",
+      "humidity": 70,
+      "windSpeed": 8,
+      "visibility": "Excellent"
+    },
+    "forecast": [
+      {
+        "date": "2024-06-15",
+        "high": 28,
+        "low": 20,
+        "condition": "Sunny",
+        "precipitation": 0
+      },
+      {
+        "date": "2024-06-16",
+        "high": 26,
+        "low": 19,
+        "condition": "Partly Cloudy",
+        "precipitation": 20
+      },
+      {
+        "date": "2024-06-17",
+        "high": 27,
+        "low": 21,
+        "condition": "Sunny",
+        "precipitation": 0
+      }
+    ],
+    "events": [
+      {
+        "name": "Ghibli Museum Exhibition",
+        "date": "2024-06-15",
+        "type": "Cultural",
+        "crowdLevel": "Medium",
+        "impact": "Advance booking required"
+      },
+      {
+        "name": "Shibuya Crossing Festival",
+        "date": "2024-06-18",
+        "type": "Entertainment",
+        "crowdLevel": "Very High",
+        "impact": "Area extremely crowded, transportation delays"
+      }
+    ],
+    "safetyAlerts": [
+      {
+        "type": "Weather",
+        "message": "High UV index - sunscreen recommended",
+        "severity": "Low"
+      }
+    ]
+  },
+  {
+    "location": "Paris, France",
+    "currentWeather": {
+      "temperature": 23,
+      "condition": "Sunny",
+      "humidity": 55,
+      "windSpeed": 15,
+      "visibility": "Good"
+    },
+    "forecast": [
+      {
+        "date": "2024-06-15",
+        "high": 26,
+        "low": 18,
+        "condition": "Sunny",
+        "precipitation": 0
+      },
+      {
+        "date": "2024-06-16",
+        "high": 24,
+        "low": 17,
+        "condition": "Partly Cloudy",
+        "precipitation": 40
+      },
+      {
+        "date": "2024-06-17",
+        "high": 25,
+        "low": 19,
+        "condition": "Sunny",
+        "precipitation": 0
+      }
+    ],
+    "events": [
+      {
+        "name": "French Open Tennis",
+        "date": "2024-06-15",
+        "type": "Sports",
+        "crowdLevel": "Very High",
+        "impact": "Roland Garros area extremely busy"
+      },
+      {
+        "name": "Paris Jazz Festival",
+        "date": "2024-06-22",
+        "type": "Music",
+        "crowdLevel": "High",
+        "impact": "Parks crowded, some street closures"
+      }
+    ],
+    "safetyAlerts": [
+      {
+        "type": "Transport",
+        "message": "Metro line 1 maintenance - delays expected",
+        "severity": "Low"
+      }
+    ]
+  },
+  {
+    "location": "Dubai, UAE",
+    "currentWeather": {
+      "temperature": 38,
+      "condition": "Sunny",
+      "humidity": 45,
+      "windSpeed": 20,
+      "visibility": "Good"
+    },
+    "forecast": [
+      {
+        "date": "2024-06-15",
+        "high": 40,
+        "low": 28,
+        "condition": "Sunny",
+        "precipitation": 0
+      },
+      {
+        "date": "2024-06-16",
+        "high": 39,
+        "low": 27,
+        "condition": "Sunny",
+        "precipitation": 0
+      },
+      {
+        "date": "2024-06-17",
+        "high": 41,
+        "low": 29,
+        "condition": "Sunny",
+        "precipitation": 0
+      }
+    ],
+    "events": [
+      {
+        "name": "Dubai Summer Festival",
+        "date": "2024-06-15",
+        "type": "Entertainment",
+        "crowdLevel": "High",
+        "impact": "Malls extremely busy, special offers available"
+      },
+      {
+        "name": "Dubai Food Festival",
+        "date": "2024-06-25",
+        "type": "Food",
+        "crowdLevel": "Medium",
+        "impact": "Restaurants busy, special menus"
+      }
+    ],
+    "safetyAlerts": [
+      {
+        "type": "Weather",
+        "message": "Extreme heat warning - stay hydrated, avoid outdoor activities 12-4 PM",
+        "severity": "High"
+      }
+    ]
+  }
+]
