@@ -104,7 +104,7 @@ class Trip(Base):
     travelers_count = Column(Integer, default=1)
     is_public = Column(Boolean, default=False)
     tags = Column(ARRAY(String))
-    metadata = Column(JSON)  # Additional trip data
+    trip_metadata = Column(JSON)  # Additional trip data
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -377,7 +377,7 @@ class ChatMessage(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
-    metadata = Column(JSON)  # Message metadata, tokens, etc.
+    trip_metadata = Column(JSON)  # Message metadata, tokens, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -573,7 +573,7 @@ class ChatMessageCreate(ChatMessageBase):
 class ChatMessageResponse(ChatMessageBase):
     id: uuid.UUID
     session_id: uuid.UUID
-    metadata: Optional[Dict[str, Any]] = None
+    trip_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
     
     class Config:

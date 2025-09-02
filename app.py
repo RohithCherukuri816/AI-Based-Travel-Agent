@@ -12,11 +12,62 @@ import random
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from langgraph.graph import StateGraph, END
-from langgraph.prebuilt import ToolExecutor
-from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, AIMessage
 import asyncio
+
+# Try to import LangGraph and LangChain components
+try:
+    from langgraph.graph import StateGraph, END
+    from langgraph.prebuilt import ToolExecutor
+    from langchain_core.tools import tool
+    from langchain_core.messages import HumanMessage, AIMessage
+    LANGGRAPH_AVAILABLE = True
+except ImportError as e:
+    print(f"Warning: LangGraph/LangChain not available: {e}")
+    LANGGRAPH_AVAILABLE = False
+    # Create dummy classes to prevent errors
+    class StateGraph:
+        def __init__(self, *args, **kwargs):
+            pass
+        def add_node(self, *args, **kwargs):
+            pass
+        def add_edge(self, *args, **kwargs):
+            pass
+        def set_entry_point(self, *args, **kwargs):
+            pass
+        def compile(self):
+            return None
+    
+    class END:
+        pass
+    
+    class ToolExecutor:
+        pass
+    
+    def tool(func):
+        return func
+    
+    class HumanMessage:
+        def __init__(self, *args, **kwargs):
+            pass
+    
+    class AIMessage:
+        def __init__(self, *args, **kwargs):
+            pass
+
+# Import analytics and chat modules
+try:
+    from analytics_dashboard import get_dashboard_data, get_real_time_metrics, analytics_dashboard
+    ANALYTICS_AVAILABLE = True
+except ImportError as e:
+    print(f"Analytics module not available: {e}")
+    ANALYTICS_AVAILABLE = False
+
+try:
+    from ai_chat import chat_endpoint, start_chat_session, get_chat_history, get_chat_manager
+    CHAT_AVAILABLE = True
+except ImportError as e:
+    print(f"Chat module not available: {e}")
+    CHAT_AVAILABLE = False
 
 # Initialize FastAPI app
 app = FastAPI(
@@ -275,30 +326,37 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
 # LangGraph workflow
 def create_travel_workflow():
     """Create the LangGraph workflow for travel planning"""
+    if not LANGGRAPH_AVAILABLE:
+        print("Warning: LangGraph not available, using simplified workflow")
+        return None
     
-    # Define the state graph
-    workflow = StateGraph(TravelState)
-    
-    # Add nodes for each agent
-    workflow.add_node("user_agent", analyze_user_preferences)
-    workflow.add_node("flight_agent", find_flight_options)
-    workflow.add_node("hotel_agent", find_hotel_options)
-    workflow.add_node("activity_agent", find_activities)
-    workflow.add_node("weather_agent", get_weather_info)
-    workflow.add_node("budget_agent", analyze_budget)
-    workflow.add_node("planner_agent", create_itinerary)
-    
-    # Define the workflow
-    workflow.set_entry_point("user_agent")
-    workflow.add_edge("user_agent", "flight_agent")
-    workflow.add_edge("flight_agent", "hotel_agent")
-    workflow.add_edge("hotel_agent", "activity_agent")
-    workflow.add_edge("activity_agent", "weather_agent")
-    workflow.add_edge("weather_agent", "budget_agent")
-    workflow.add_edge("budget_agent", "planner_agent")
-    workflow.add_edge("planner_agent", END)
-    
-    return workflow.compile()
+    try:
+        # Define the state graph
+        workflow = StateGraph(TravelState)
+        
+        # Add nodes for each agent
+        workflow.add_node("user_agent", analyze_user_preferences)
+        workflow.add_node("flight_agent", find_flight_options)
+        workflow.add_node("hotel_agent", find_hotel_options)
+        workflow.add_node("activity_agent", find_activities)
+        workflow.add_node("weather_agent", get_weather_info)
+        workflow.add_node("budget_agent", analyze_budget)
+        workflow.add_node("planner_agent", create_itinerary)
+        
+        # Define the workflow
+        workflow.set_entry_point("user_agent")
+        workflow.add_edge("user_agent", "flight_agent")
+        workflow.add_edge("flight_agent", "hotel_agent")
+        workflow.add_edge("hotel_agent", "activity_agent")
+        workflow.add_edge("activity_agent", "weather_agent")
+        workflow.add_edge("weather_agent", "budget_agent")
+        workflow.add_edge("budget_agent", "planner_agent")
+        workflow.add_edge("planner_agent", END)
+        
+        return workflow.compile()
+    except Exception as e:
+        print(f"Warning: Failed to create LangGraph workflow: {e}")
+        return None
 
 # Initialize the workflow
 travel_workflow = create_travel_workflow()
@@ -307,6 +365,10 @@ travel_workflow = create_travel_workflow()
 async def plan_travel(request: TravelRequest):
     """Main endpoint for travel planning"""
     try:
+        if travel_workflow is None:
+            # Fallback to simplified planning when LangGraph is not available
+            return await simplified_travel_planning(request)
+        
         # Initialize state
         initial_state = TravelState(
             user_input={
@@ -363,6 +425,88 @@ async def plan_travel(request: TravelRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Travel planning failed: {str(e)}")
 
+async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
+    """Simplified travel planning when LangGraph is not available"""
+    try:
+        # Use the individual tools directly
+        user_profile = analyze_user_preferences(
+            request.destination, 
+            request.preferences, 
+            request.budget, 
+            request.duration
+        )
+        
+        flight_options = find_flight_options(
+            request.destination, 
+            request.start_date, 
+            request.budget, 
+            request.travelers
+        )
+        
+        hotel_options = find_hotel_options(
+            request.destination, 
+            request.duration, 
+            request.budget, 
+            request.travelers, 
+            user_profile.get("travel_style", "balanced")
+        )
+        
+        activity_options = find_activities(
+            request.destination, 
+            request.duration, 
+            request.preferences, 
+            request.budget
+        )
+        
+        weather_info = get_weather_info(
+            request.destination, 
+            request.start_date, 
+            request.duration
+        )
+        
+        # Calculate costs
+        flight_cost = sum(flight["price"] for flight in flight_options[:1]) * request.travelers
+        hotel_cost = sum(hotel["price"] for hotel in hotel_options[:1]) * request.duration * request.travelers
+        activity_cost = sum(activity["price"] for activity in activity_options)
+        
+        budget_analysis = analyze_budget(
+            flight_cost, 
+            hotel_cost, 
+            activity_cost, 
+            request.budget, 
+            request.travelers
+        )
+        
+        # Create simple itinerary
+        itinerary = create_itinerary(
+            activity_options, 
+            request.duration, 
+            weather_info, 
+            weather_info.get("safety_alerts", [])
+        )
+        
+        # Generate summary
+        summary = f"Your {request.duration}-day trip to {request.destination} is planned! "
+        summary += f"Total cost: ${budget_analysis['total_cost']:.2f}. "
+        summary += f"Style: {user_profile.get('travel_style', 'balanced').title()}. "
+        summary += f"Budget status: {budget_analysis.get('budget_status', 'unknown').replace('_', ' ').title()}."
+        
+        return TravelResponse(
+            itinerary=itinerary,
+            total_cost=budget_analysis["total_cost"],
+            summary=summary,
+            recommendations=budget_analysis.get("recommendations", [])
+        )
+        
+    except Exception as e:
+        # Return a basic response if everything fails
+        return TravelResponse(
+            itinerary=[],
+            total_cost=0,
+            summary=f"Trip planning to {request.destination} is temporarily unavailable. Please try again later.",
+            recommendations=["Please try again later or contact support if the issue persists."]
+        )
+
 @app.get("/api/health")
 async def health_check():
     """Health check endpoint"""
@@ -375,6 +519,91 @@ async def get_destinations():
     for hotel in HOTELS:
         destinations.add(hotel["location"])
     return {"destinations": list(destinations)}
+
+# Analytics endpoints
+@app.get("/api/analytics/health")
+async def analytics_health():
+    """Analytics service health check"""
+    if not ANALYTICS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Analytics service not available")
+    return {"status": "healthy", "service": "analytics", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/analytics/dashboard")
+async def get_analytics_dashboard(time_range: str = "month"):
+    """Get analytics dashboard data"""
+    if not ANALYTICS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Analytics service not available")
+    try:
+        data = await get_dashboard_data(time_range)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Analytics error: {str(e)}")
+
+@app.get("/api/analytics/realtime")
+async def get_analytics_realtime():
+    """Get real-time analytics metrics"""
+    if not ANALYTICS_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Analytics service not available")
+    try:
+        data = await get_real_time_metrics()
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Real-time analytics error: {str(e)}")
+
+# Chat endpoints
+@app.get("/api/chat/health")
+async def chat_health():
+    """Chat service health check"""
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat service not available")
+    return {"status": "healthy", "service": "chat", "timestamp": datetime.now().isoformat()}
+
+@app.post("/api/chat/message")
+async def send_chat_message(request: Dict[str, Any]):
+    """Send a message to the AI chat"""
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat service not available")
+    
+    try:
+        user_id = request.get("user_id", "anonymous")
+        message = request.get("message", "")
+        session_id = request.get("session_id")
+        
+        if not message:
+            raise HTTPException(status_code=400, detail="Message is required")
+        
+        response = await chat_endpoint(user_id, message, session_id)
+        return response
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Chat error: {str(e)}")
+
+@app.post("/api/chat/session")
+async def create_chat_session(request: Dict[str, Any]):
+    """Create a new chat session"""
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat service not available")
+    
+    try:
+        user_id = request.get("user_id", "anonymous")
+        trip_id = request.get("trip_id")
+        
+        session_id = await start_chat_session(user_id, trip_id)
+        return {"session_id": session_id, "user_id": user_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Session creation error: {str(e)}")
+
+@app.get("/api/chat/history/{user_id}")
+async def get_user_chat_history(user_id: str, session_id: Optional[str] = None):
+    """Get chat history for a user"""
+    if not CHAT_AVAILABLE:
+        raise HTTPException(status_code=503, detail="Chat service not available")
+    
+    try:
+        history = await get_chat_history(user_id, session_id)
+        return {"user_id": user_id, "history": history}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"History retrieval error: {str(e)}")
+
 
 if __name__ == "__main__":
     import uvicorn

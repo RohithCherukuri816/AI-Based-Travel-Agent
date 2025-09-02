@@ -18,12 +18,12 @@ def print_banner():
     print("""
     ╔══════════════════════════════════════════════════════════════╗
     ║                    🚀 AI Travel Planning Agent              ║
-    ║                        NEXT LEVEL STARTUP                   ║
+    ║                        NEXT LEVEL STARTUP                    ║
     ║                                                              ║
-    ║  ✨ Multi-Agent AI System     💬 Natural Language Chat     ║
-    ║  📊 Advanced Analytics        💳 Payment Integration       ║
-    ║  🌐 Real API Integrations    📱 Progressive Web App        ║
-    ║  🔒 Enterprise Security      📈 Business Intelligence      ║
+    ║  ✨ Multi-Agent AI System     💬 Natural Language Chat      ║
+    ║  📊 Advanced Analytics        💳 Payment Integration        ║
+    ║  🌐 Real API Integrations    📱 Progressive Web App         ║
+    ║  🔒 Enterprise Security      📈 Business Intelligence       ║
     ╚══════════════════════════════════════════════════════════════╝
     """)
 
@@ -34,7 +34,7 @@ def check_python_version():
     if sys.version_info < (3, 8):
         print("❌ Python 3.8+ required. Current version:", sys.version)
         return False
-    
+
     print(f"✅ Python {sys.version_info.major}.{sys.version_info.minor}.{sys.version_info.micro}")
     return True
 
@@ -149,7 +149,7 @@ def start_backend():
             "--port", "8000",
             "--workers", "1",
             "--log-level", "info"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ], stdout=None, stderr=None)
         
         print("✅ Backend server started on http://localhost:8000")
         print("📊 API Documentation: http://localhost:8000/docs")
@@ -169,7 +169,7 @@ def start_frontend():
         # Start frontend server
         frontend_process = subprocess.Popen([
             sys.executable, "-m", "http.server", "8001"
-        ], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ], stdout=None, stderr=None)
         
         print("✅ Frontend server started on http://localhost:8001")
         return frontend_process
@@ -252,14 +252,22 @@ def run_health_check():
     ]
     
     for service_name, url in services:
-        try:
-            response = requests.get(url, timeout=5)
-            if response.status_code == 200:
-                print(f"✅ {service_name}: Healthy")
-            else:
-                print(f"⚠️  {service_name}: Status {response.status_code}")
-        except Exception as e:
-            print(f"❌ {service_name}: Unavailable - {e}")
+        success = False
+        last_error = None
+        for attempt in range(5):  # up to 5 retries with backoff
+            try:
+                response = requests.get(url, timeout=5)
+                if response.status_code == 200:
+                    print(f"✅ {service_name}: Healthy")
+                    success = True
+                    break
+                else:
+                    last_error = f"Status {response.status_code}"
+            except Exception as e:
+                last_error = e
+            time.sleep(1 + attempt)  # incremental backoff
+        if not success:
+            print(f"❌ {service_name}: Unavailable - {last_error}")
     
     print("🏥 Health check completed")
 

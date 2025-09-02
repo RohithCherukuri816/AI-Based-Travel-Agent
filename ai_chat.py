@@ -10,17 +10,40 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple
 from dataclasses import dataclass
 from enum import Enum
+from langchain.tools import Tool
+from typing import List
+
+import google.generativeai as genai
+
 
 import openai
 from anthropic import Anthropic
 import google.generativeai as genai
-from langchain.chat_models import ChatOpenAI, ChatAnthropic
-from langchain.schema import HumanMessage, AIMessage, SystemMessage
-from langchain.memory import ConversationBufferMemory
-from langchain.prompts import ChatPromptTemplate
-from langchain.chains import LLMChain
-from langchain.tools import Tool
-from langchain.agents import initialize_agent, AgentType
+
+try:
+    from langchain_openai import ChatOpenAI
+    from langchain_anthropic import ChatAnthropic
+    from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
+    from langchain.memory import ConversationBufferMemory
+    from langchain_core.prompts import ChatPromptTemplate
+    from langchain.chains import LLMChain
+    from langchain_core.tools import Tool
+    from langchain.agents import initialize_agent, AgentType
+    LANGCHAIN_AVAILABLE = True
+except ImportError:
+    # Fallback for older versions or missing dependencies
+    try:
+        from langchain.chat_models import ChatOpenAI, ChatAnthropic
+        from langchain.schema import HumanMessage, AIMessage, SystemMessage
+        from langchain.memory import ConversationBufferMemory
+        from langchain.prompts import ChatPromptTemplate
+        from langchain.chains import LLMChain
+        from langchain.tools import Tool
+        from langchain.agents import initialize_agent, AgentType
+        LANGCHAIN_AVAILABLE = True
+    except ImportError:
+        LANGCHAIN_AVAILABLE = False
+        print("Warning: LangChain not available, chat features will be limited")
 
 from config import settings, get_ai_config
 from models import ChatSession, ChatMessage, User, Trip
@@ -89,18 +112,19 @@ class AIChatManager:
     
     def _init_ai_clients(self):
         """Initialize AI service clients"""
-        if self.ai_config["openai"]["enabled"]:
-            openai.api_key = self.ai_config["openai"]["api_key"]
-            self.openai_client = openai.OpenAI()
-        
+        if self.ai_config["google"]["enabled"]:
+            genai.configure(api_key=self.ai_config["google"]["api_key"])
+            self.google_model = genai.GenerativeModel("gemini-1.5-pro")
+
+
         if self.ai_config["anthropic"]["enabled"]:
             self.anthropic_client = Anthropic(
                 api_key=self.ai_config["anthropic"]["api_key"]
             )
-        
+
         if self.ai_config["google"]["enabled"]:
             genai.configure(api_key=self.ai_config["google"]["api_key"])
-            self.gemini_model = genai.GenerativeModel('gemini-pro')
+            self.gemini_model = genai.GenerativeModel("gemini-pro")
     
     def _create_travel_tools(self) -> List[Tool]:
         """Create travel planning tools for the AI agent"""
@@ -140,23 +164,75 @@ class AIChatManager:
     
     def _initialize_agent(self):
         """Initialize the LangChain agent"""
-        if self.ai_config["openai"]["enabled"]:
-            llm = ChatOpenAI(
-                model=self.ai_config["openai"]["model"],
-                temperature=self.ai_config["openai"]["temperature"],
-                max_tokens=self.ai_config["openai"]["max_tokens"]
-            )
+        if not LANGCHAIN_AVAILABLE:
+            logger.warning("LangChain not available, using fallback chat mode")
+            return None
             
-            agent = initialize_agent(
-                tools=self.tools,
-                llm=llm,
-                agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
-                memory=self.memory,
-                verbose=True,
-                handle_parsing_errors=True
-            )
-            return agent
+        try:
+            if self.ai_config["google"]["enabled"]:
+                # Wrap Gemini into a simple LLM-like interface for LangChain
+                class GeminiLLM:
+                    def __init__(self, model):
+                        self.model = model
+
+                    def __call__(self, prompt, **kwargs):
+                        try:
+                            response = self.model.generate_content(prompt)
+                            return response.text if response and hasattr(response, "text") else ""
+                        except Exception as e:
+                            logger.error(f"Gemini API error: {e}")
+                            return "I'm having trouble connecting to the AI service. Please try again."
+
+                llm = GeminiLLM(self.gemini_model)
+
+                agent = initialize_agent(
+                    tools=self.tools,
+                    llm=llm,
+                    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+                    memory=self.memory,
+                    verbose=True,
+                    handle_parsing_errors=True
+                )
+                return agent
+
+            elif self.ai_config["openai"]["enabled"]:
+                llm = ChatOpenAI(
+                    model=self.ai_config["openai"]["model"],
+                    temperature=self.ai_config["openai"]["temperature"],
+                    max_tokens=self.ai_config["openai"]["max_tokens"]
+                )
+                agent = initialize_agent(
+                    tools=self.tools,
+                    llm=llm,
+                    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+                    memory=self.memory,
+                    verbose=True,
+                    handle_parsing_errors=True
+                )
+                return agent
+
+            elif self.ai_config["anthropic"]["enabled"]:
+                llm = ChatAnthropic(
+                    model=self.ai_config["anthropic"]["model"],
+                    temperature=self.ai_config["anthropic"]["temperature"],
+                    max_tokens=self.ai_config["anthropic"]["max_tokens"]
+                )
+                agent = initialize_agent(
+                    tools=self.tools,
+                    llm=llm,
+                    agent=AgentType.CONVERSATIONAL_REACT_DESCRIPTION,
+                    memory=self.memory,
+                    verbose=True,
+                    handle_parsing_errors=True
+                )
+                return agent
+
+        except Exception as e:
+            logger.error(f"Failed to initialize LangChain agent: {e}")
+            return None
+
         return None
+
     
     async def process_message(
         self, 
@@ -223,25 +299,30 @@ class AIChatManager:
         """Analyze user message intent using AI"""
         intent_prompt = f"""
         Analyze the following user message and determine the intent for travel planning.
-        
+
         User Message: "{message}"
         Current Context: Destination: {context.current_destination}, Style: {context.travel_style}, Budget: {context.budget_range}
-        
+
         Classify the intent into one of these categories:
         1. travel_planning - User wants to plan a trip or get itinerary suggestions
         2. question - User is asking for information about destinations, activities, etc.
         3. booking - User wants to book flights, hotels, or activities
         4. general - General conversation or unclear intent
-        
+
         Return a JSON response with:
         - type: the intent category
         - confidence: confidence score (0-1)
         - entities: extracted entities (destinations, dates, preferences, etc.)
         - action_required: what action the AI should take
         """
-        
+
         try:
-            if self.ai_config["openai"]["enabled"]:
+            if self.ai_config["google"]["enabled"]:
+                response = self.gemini_model.generate_content(intent_prompt)
+                intent_data = json.loads(response.text)
+                return intent_data
+
+            elif self.ai_config["openai"]["enabled"]:
                 response = self.openai_client.chat.completions.create(
                     model="gpt-4",
                     messages=[{"role": "user", "content": intent_prompt}],
@@ -250,12 +331,23 @@ class AIChatManager:
                 )
                 intent_data = json.loads(response.choices[0].message.content)
                 return intent_data
+
+            elif self.ai_config["anthropic"]["enabled"]:
+                msg = self.anthropic_client.messages.create(
+                    model=self.ai_config["anthropic"]["model"],
+                    max_tokens=self.ai_config["anthropic"]["max_tokens"],
+                    messages=[{"role": "user", "content": intent_prompt}]
+                )
+                intent_data = json.loads(msg.content[0].text)
+                return intent_data
+
             else:
-                # Fallback to simple keyword matching
                 return self._simple_intent_analysis(message)
+
         except Exception as e:
             logger.warning(f"Intent analysis failed: {e}")
             return self._simple_intent_analysis(message)
+
     
     def _simple_intent_analysis(self, message: str) -> Dict[str, Any]:
         """Simple keyword-based intent analysis fallback"""
@@ -325,8 +417,8 @@ class AIChatManager:
         """
         
         try:
-            if self.ai_config["openai"]["enabled"]:
-                response = self.openai_client.chat.completions.create(
+            if self.ai_config["google"]["enabled"]:
+                response = self.google_model.chat.completions.create(
                     model="gpt-4",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=300,
@@ -383,9 +475,9 @@ class AIChatManager:
         """
         
         try:
-            if self.ai_config["openai"]["enabled"]:
-                response = self.openai_client.chat.completions.create(
-                    model="gpt-4",
+            if self.ai_config["google"]["enabled"]:
+                response = self.google_model.chat.completions.create(
+                    model="gemini-1.5-pro",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=150,
                     temperature=0.8
@@ -449,8 +541,8 @@ class AIChatManager:
         """
         
         try:
-            if self.ai_config["openai"]["enabled"]:
-                response = self.openai_client.chat.completions.create(
+            if self.ai_config["google"]["enabled"]:
+                response = self.google_model.chat.completions.create(
                     model="gpt-4",
                     messages=[{"role": "user", "content": prompt}],
                     max_tokens=250,
@@ -666,24 +758,61 @@ class ChatSessionManager:
         return self.active_sessions.get(session_id)
 
 
-# Global chat manager instance
-chat_manager = ChatSessionManager()
+# Global chat manager instance - initialize lazily to avoid import errors
+chat_manager = None
+
+def get_chat_manager():
+    """Get or create the global chat manager instance"""
+    global chat_manager
+    if chat_manager is None:
+        try:
+            chat_manager = ChatSessionManager()
+        except Exception as e:
+            logger.error(f"Failed to initialize chat manager: {e}")
+            # Return a dummy manager that handles errors gracefully
+            chat_manager = DummyChatManager()
+    return chat_manager
+
+class DummyChatManager:
+    """Dummy chat manager for when the real one fails to initialize"""
+    
+    async def start_session(self, user_id: str, trip_id: Optional[str] = None) -> str:
+        return f"dummy_session_{user_id}"
+    
+    async def send_message(self, user_id: str, message: str, session_id: Optional[str] = None) -> Dict[str, Any]:
+        return {
+            "success": False,
+            "error": "Chat service temporarily unavailable",
+            "response": {
+                "content": "I apologize, but the chat service is currently unavailable. Please try again later.",
+                "type": "error"
+            }
+        }
+    
+    async def end_session(self, session_id: str):
+        pass
+    
+    def get_session_context(self, session_id: str) -> Optional[ChatContext]:
+        return None
 
 
 # API endpoints for chat functionality
 async def chat_endpoint(user_id: str, message: str, session_id: Optional[str] = None) -> Dict[str, Any]:
     """Main chat endpoint"""
-    return await chat_manager.send_message(user_id, message, session_id)
+    manager = get_chat_manager()
+    return await manager.send_message(user_id, message, session_id)
 
 
 async def start_chat_session(user_id: str, trip_id: Optional[str] = None) -> str:
     """Start a new chat session"""
-    return await chat_manager.start_session(user_id, trip_id)
+    manager = get_chat_manager()
+    return await manager.start_session(user_id, trip_id)
 
 
 async def get_chat_history(user_id: str, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Get chat history"""
-    return await chat_manager.get_chat_history(user_id, session_id)
+    manager = get_chat_manager()
+    return await manager.get_chat_history(user_id, session_id)
 
 
 if __name__ == "__main__":
