@@ -473,14 +473,32 @@ async function handleTripPlanning(e) {
         STATE.isProcessing = true;
         
         // Plan trip
-        const response = await planTrip(tripRequest);
-        
-        if (response.success) {
-            STATE.currentTrip = response.data;
-            showResults(response.data);
-        } else {
-            showError(response.error || 'Failed to plan trip');
-        }
+        const api = await planTrip(tripRequest);
+        // Transform backend TravelResponse into UI shape
+        const uiTrip = {
+            destination: tripRequest.destination,
+            startDate: tripRequest.startDate,
+            duration: tripRequest.duration,
+            travelers: tripRequest.travelers,
+            travelStyle: tripRequest.travelStyle,
+            itinerary: (api.itinerary || []).map((d) => `${d.date || ''}: ${[...(d.morning||[]), ...(d.afternoon||[]), ...(d.evening||[])].map(a=>a.name||a.title||'Activity').join(', ')}`),
+            recommendations: (api.recommendations || []).map((r) => ({
+                type: 'activity',
+                title: typeof r === 'string' ? r : (r.title || 'Recommendation'),
+                description: typeof r === 'string' ? '' : (r.description || ''),
+                rating: (r.rating || 4.5),
+                price: (r.price || 0)
+            })),
+            pricing: {
+                flights: Math.round((api.total_cost || 0) * 0.4),
+                accommodation: Math.round((api.total_cost || 0) * 0.4),
+                activities: Math.round((api.total_cost || 0) * 0.2),
+                transportation: 0,
+                total: Math.round(api.total_cost || 0)
+            }
+        };
+        STATE.currentTrip = uiTrip;
+        showResults(uiTrip);
         
     } catch (error) {
         console.error('Trip planning error:', error);
@@ -565,8 +583,9 @@ async function planTrip(tripRequest) {
     });
     
     if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to plan trip');
+        let message = 'Failed to plan trip';
+        try { const errorData = await response.json(); message = errorData.detail || message; } catch {}
+        throw new Error(message);
     }
     
     return await response.json();

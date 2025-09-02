@@ -94,15 +94,21 @@ class AIChatManager:
         self.places_api = PlacesAPI()
         self.flight_api = FlightAPI()
         self.hotel_api = HotelAPI()
+        self.openai_client = None
         
         # Initialize AI clients
         self._init_ai_clients()
         
-        # Conversation memory
-        self.memory = ConversationBufferMemory(
-            memory_key="chat_history",
-            return_messages=True
-        )
+        # Conversation memory (optional when LangChain unavailable)
+        self.memory = None
+        if 'ConversationBufferMemory' in globals():
+            try:
+                self.memory = ConversationBufferMemory(
+                    memory_key="chat_history",
+                    return_messages=True
+                )
+            except Exception:
+                self.memory = None
         
         # Travel planning tools
         self.tools = self._create_travel_tools()
@@ -114,7 +120,8 @@ class AIChatManager:
         """Initialize AI service clients"""
         if self.ai_config["google"]["enabled"]:
             genai.configure(api_key=self.ai_config["google"]["api_key"])
-            self.google_model = genai.GenerativeModel("gemini-1.5-pro")
+            model_name = self.ai_config["google"].get("model") or "gemini-pro"
+            self.gemini_model = genai.GenerativeModel(model_name)
 
 
         if self.ai_config["anthropic"]["enabled"]:
@@ -122,7 +129,7 @@ class AIChatManager:
                 api_key=self.ai_config["anthropic"]["api_key"]
             )
 
-        if self.ai_config["google"]["enabled"]:
+        if self.ai_config["google"]["enabled"] and not getattr(self, "gemini_model", None):
             genai.configure(api_key=self.ai_config["google"]["api_key"])
             self.gemini_model = genai.GenerativeModel("gemini-pro")
     

@@ -362,23 +362,52 @@ def create_travel_workflow():
 travel_workflow = create_travel_workflow()
 
 @app.post("/api/plan", response_model=TravelResponse)
-async def plan_travel(request: TravelRequest):
+async def plan_travel(request: Dict[str, Any]):
     """Main endpoint for travel planning"""
     try:
+        # Normalize incoming payload from frontend to internal TravelRequest
+        if isinstance(request, dict):
+            # Frontend sends camelCase keys; map them
+            destination = request.get("destination")
+            start_date = request.get("startDate") or request.get("start_date")
+            duration = int(request.get("duration")) if request.get("duration") is not None else 0
+            # Choose max budget if provided, else min, else 0
+            budget = (
+                float(request.get("budgetMax"))
+                if request.get("budgetMax") is not None
+                else float(request.get("budgetMin", 0))
+            )
+            preferences = request.get("preferences") or []
+            travelers = int(request.get("travelers", 1))
+            travel_style = request.get("travelStyle") or request.get("travel_style") or "balanced"
+
+            req = TravelRequest(
+                destination=destination,
+                start_date=start_date,
+                duration=duration,
+                budget=budget,
+                preferences=preferences,
+                travelers=travelers,
+                travel_style=travel_style,
+            )
+        else:
+            # Fallback if FastAPI already parsed into model
+            req = request  # type: ignore
+
         if travel_workflow is None:
             # Fallback to simplified planning when LangGraph is not available
-            return await simplified_travel_planning(request)
+            return await simplified_travel_planning(req)
         
         # Initialize state
         initial_state = TravelState(
             user_input={
-                "destination": request.destination,
-                "start_date": request.start_date,
-                "duration": request.duration,
-                "budget": request.budget,
-                "preferences": request.preferences,
-                "travelers": request.travelers,
-                "travel_style": request.travel_style
+                "destination": req.destination,
+                "start_date": req.start_date,
+                "duration": req.duration,
+                "budget": req.budget,
+                "preferences": req.preferences,
+                "travelers": req.travelers,
+                "travel_style": req.travel_style
             },
             user_profile={},
             flight_options=[],
@@ -400,7 +429,7 @@ async def plan_travel(request: TravelRequest):
         total_cost = result.budget_analysis.get("total_cost", 0)
         
         # Generate summary
-        summary = f"Your {request.duration}-day trip to {request.destination} is planned! "
+        summary = f"Your {req.duration}-day trip to {req.destination} is planned! "
         summary += f"Total cost: ${total_cost:.2f}. "
         summary += f"Style: {result.user_profile.get('travel_style', 'balanced').title()}. "
         summary += f"Budget status: {result.budget_analysis.get('budget_status', 'unknown').replace('_', ' ').title()}."
@@ -512,6 +541,33 @@ async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
 
+@app.get("/api/places/search")
+async def search_places(q: str):
+    """Simple destination suggestions from mock HOTELS/ACTIVITIES data"""
+    query = (q or "").strip().lower()
+    if not query:
+        return []
+    seen = set()
+    results = []
+    # Suggest locations from hotels
+    for hotel in HOTELS:
+        name = hotel.get("location", "")
+        if name and query in name.lower() and name not in seen:
+            results.append({"name": name})
+            seen.add(name)
+            if len(results) >= 10:
+                break
+    # If not enough, add activity locations
+    if len(results) < 10:
+        for act in ACTIVITIES:
+            name = act.get("location", "")
+            if name and query in name.lower() and name not in seen:
+                results.append({"name": name})
+                seen.add(name)
+                if len(results) >= 10:
+                    break
+    return results
+
 @app.get("/api/destinations")
 async def get_destinations():
     """Get available destinations from mock data"""
@@ -549,6 +605,11 @@ async def get_analytics_realtime():
         return data
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Real-time analytics error: {str(e)}")
+
+# Backward/alternate path used by frontend (typo-safe)
+@app.get("/api/analytics/real-time")
+async def get_analytics_realtime_alias():
+    return await get_analytics_realtime()
 
 # Chat endpoints
 @app.get("/api/chat/health")
