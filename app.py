@@ -2,7 +2,6 @@
 AI Travel Planning Agent - FastAPI Backend with LangGraph
 Multi-agent system for personalized travel itinerary generation
 """
-
 import json
 import os
 from datetime import datetime, timedelta
@@ -13,6 +12,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import asyncio
+
+# --- CRITICAL FIX: Ensure environment variables are loaded first ---
+from dotenv import load_dotenv
+load_dotenv()
+# --- END CRITICAL FIX ---
+
 
 # Try to import LangGraph and LangChain components
 try:
@@ -26,33 +31,18 @@ except ImportError as e:
     LANGGRAPH_AVAILABLE = False
     # Create dummy classes to prevent errors
     class StateGraph:
-        def __init__(self, *args, **kwargs):
-            pass
-        def add_node(self, *args, **kwargs):
-            pass
-        def add_edge(self, *args, **kwargs):
-            pass
-        def set_entry_point(self, *args, **kwargs):
-            pass
-        def compile(self):
-            return None
-    
-    class END:
-        pass
-    
-    class ToolExecutor:
-        pass
-    
-    def tool(func):
-        return func
-    
+        def __init__(self, *args, **kwargs): pass
+        def add_node(self, *args, **kwargs): pass
+        def add_edge(self, *args, **kwargs): pass
+        def set_entry_point(self, *args, **kwargs): pass
+        def compile(self): return None
+    class END: pass
+    class ToolExecutor: pass
+    def tool(func): return func
     class HumanMessage:
-        def __init__(self, *args, **kwargs):
-            pass
-    
+        def __init__(self, *args, **kwargs): pass
     class AIMessage:
-        def __init__(self, *args, **kwargs):
-            pass
+        def __init__(self, *args, **kwargs): pass
 
 # Import analytics and chat modules
 try:
@@ -157,19 +147,16 @@ def analyze_user_preferences(destination: str, preferences: List[str], budget: f
 @tool
 def find_flight_options(destination: str, start_date: str, budget: float, travelers: int) -> List[Dict[str, Any]]:
     """Find suitable flight options based on destination and budget"""
-    # Filter flights by destination (simplified matching)
     destination_keywords = destination.lower().split()
     suitable_flights = []
     
     for flight in FLIGHTS:
-        # Simple destination matching (in real app, use proper airport codes)
         if any(keyword in flight["destination"].lower() or keyword in flight["airline"].lower() for keyword in destination_keywords):
-            if flight["price"] * travelers <= budget * 0.4:  # Flights should be max 40% of budget
+            if flight["price"] * travelers <= budget * 0.4:
                 suitable_flights.append(flight)
     
-    # Sort by price and safety rating
     suitable_flights.sort(key=lambda x: (x["price"], -x["safetyRating"]))
-    return suitable_flights[:3]  # Return top 3 options
+    return suitable_flights[:3]
 
 @tool
 def find_hotel_options(destination: str, duration: int, budget: float, travelers: int, travel_style: str) -> List[Dict[str, Any]]:
@@ -180,8 +167,7 @@ def find_hotel_options(destination: str, duration: int, budget: float, travelers
     for hotel in HOTELS:
         if any(keyword in hotel["location"].lower() for keyword in destination_keywords):
             total_cost = hotel["price"] * duration * travelers
-            if total_cost <= budget * 0.5:  # Hotels should be max 50% of budget
-                # Filter by travel style
+            if total_cost <= budget * 0.5:
                 if travel_style == "luxury" and hotel["price"] >= 300:
                     suitable_hotels.append(hotel)
                 elif travel_style == "budget" and hotel["price"] <= 150:
@@ -189,7 +175,6 @@ def find_hotel_options(destination: str, duration: int, budget: float, travelers
                 elif travel_style == "balanced" or travel_style == "adventure":
                     suitable_hotels.append(hotel)
     
-    # Sort by rating and safety
     suitable_hotels.sort(key=lambda x: (-x["rating"], -x["safetyRating"]))
     return suitable_hotels[:3]
 
@@ -201,14 +186,12 @@ def find_activities(destination: str, duration: int, preferences: List[str], bud
     
     for activity in ACTIVITIES:
         if any(keyword in activity["location"].lower() for keyword in destination_keywords):
-            # Check if activity matches preferences
             if any(pref.lower() in activity["tags"] or pref.lower() in activity["category"].lower() for pref in preferences):
-                if activity["price"] <= budget * 0.1:  # Activities should be max 10% of budget per day
+                if activity["price"] <= budget * 0.1:
                     suitable_activities.append(activity)
     
-    # Sort by rating and authenticity
     suitable_activities.sort(key=lambda x: (-x["rating"], -x["authenticLocal"]))
-    return suitable_activities[:duration * 2]  # 2 activities per day
+    return suitable_activities[:duration * 2]
 
 @tool
 def get_weather_info(destination: str, start_date: str, duration: int) -> Dict[str, Any]:
@@ -224,7 +207,6 @@ def get_weather_info(destination: str, start_date: str, duration: int) -> Dict[s
                 "safety_alerts": weather_data["safetyAlerts"]
             }
     
-    # Return default weather if destination not found
     return {
         "current": {"temperature": 20, "condition": "Unknown", "humidity": 60, "windSpeed": 10, "visibility": "Good"},
         "forecast": [],
@@ -265,7 +247,6 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
     """Create a day-by-day itinerary with optimal scheduling"""
     itinerary = []
     
-    # Group activities by day
     activities_per_day = len(activities) // duration
     remaining_activities = len(activities) % duration
     
@@ -274,18 +255,15 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
         if day <= remaining_activities:
             day_activities.append(activities[-(day)])
         
-        # Get weather for this day
         day_weather = weather_info.get("forecast", [])
         weather_condition = day_weather[day-1] if day-1 < len(day_weather) else {"condition": "Unknown", "precipitation": 0}
         
-        # Schedule activities based on weather and crowd levels
         morning_activities = []
         afternoon_activities = []
         evening_activities = []
         
         for activity in day_activities:
             if weather_condition.get("precipitation", 0) > 50 and "outdoor" in activity.get("tags", []):
-                # Move outdoor activities to better weather days if possible
                 continue
             
             if activity.get("bestTime") == "Morning":
@@ -295,26 +273,23 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
             else:
                 afternoon_activities.append(activity)
         
-        # Create day schedule
         day_schedule = {
             "day": day,
             "date": (datetime.now() + timedelta(days=day-1)).strftime("%Y-%m-%d"),
             "weather": weather_condition,
-            "morning": morning_activities[:2],  # Max 2 morning activities
-            "afternoon": afternoon_activities[:2],  # Max 2 afternoon activities
-            "evening": evening_activities[:1],  # Max 1 evening activity
+            "morning": morning_activities[:2],
+            "afternoon": afternoon_activities[:2],
+            "evening": evening_activities[:1],
             "total_activities": len(morning_activities) + len(afternoon_activities) + len(evening_activities),
             "estimated_cost": sum(act.get("price", 0) for act in day_activities),
             "travel_tips": []
         }
         
-        # Add travel tips based on weather and safety
         if weather_condition.get("precipitation", 0) > 50:
             day_schedule["travel_tips"].append("Bring umbrella and waterproof clothing")
         if weather_condition.get("temperature", 20) > 30:
             day_schedule["travel_tips"].append("Stay hydrated and avoid outdoor activities during peak heat")
         
-        # Add safety tips
         for alert in safety_alerts:
             if alert.get("severity") in ["High", "Medium"]:
                 day_schedule["travel_tips"].append(f"Safety Alert: {alert.get('message', '')}")
@@ -331,10 +306,8 @@ def create_travel_workflow():
         return None
     
     try:
-        # Define the state graph
         workflow = StateGraph(TravelState)
         
-        # Add nodes for each agent
         workflow.add_node("user_agent", analyze_user_preferences)
         workflow.add_node("flight_agent", find_flight_options)
         workflow.add_node("hotel_agent", find_hotel_options)
@@ -343,7 +316,6 @@ def create_travel_workflow():
         workflow.add_node("budget_agent", analyze_budget)
         workflow.add_node("planner_agent", create_itinerary)
         
-        # Define the workflow
         workflow.set_entry_point("user_agent")
         workflow.add_edge("user_agent", "flight_agent")
         workflow.add_edge("flight_agent", "hotel_agent")
@@ -358,20 +330,16 @@ def create_travel_workflow():
         print(f"Warning: Failed to create LangGraph workflow: {e}")
         return None
 
-# Initialize the workflow
 travel_workflow = create_travel_workflow()
 
 @app.post("/api/plan", response_model=TravelResponse)
 async def plan_travel(request: Dict[str, Any]):
     """Main endpoint for travel planning"""
     try:
-        # Normalize incoming payload from frontend to internal TravelRequest
         if isinstance(request, dict):
-            # Frontend sends camelCase keys; map them
             destination = request.get("destination")
             start_date = request.get("startDate") or request.get("start_date")
             duration = int(request.get("duration")) if request.get("duration") is not None else 0
-            # Choose max budget if provided, else min, else 0
             budget = (
                 float(request.get("budgetMax"))
                 if request.get("budgetMax") is not None
@@ -391,14 +359,11 @@ async def plan_travel(request: Dict[str, Any]):
                 travel_style=travel_style,
             )
         else:
-            # Fallback if FastAPI already parsed into model
-            req = request  # type: ignore
+            req = request
 
         if travel_workflow is None:
-            # Fallback to simplified planning when LangGraph is not available
             return await simplified_travel_planning(req)
         
-        # Initialize state
         initial_state = TravelState(
             user_input={
                 "destination": req.destination,
@@ -421,20 +386,16 @@ async def plan_travel(request: Dict[str, Any]):
             errors=[]
         )
         
-        # Execute the workflow
         result = travel_workflow.invoke(initial_state)
         
-        # Extract results
         itinerary = result.final_itinerary
         total_cost = result.budget_analysis.get("total_cost", 0)
         
-        # Generate summary
         summary = f"Your {req.duration}-day trip to {req.destination} is planned! "
         summary += f"Total cost: ${total_cost:.2f}. "
         summary += f"Style: {result.user_profile.get('travel_style', 'balanced').title()}. "
         summary += f"Budget status: {result.budget_analysis.get('budget_status', 'unknown').replace('_', ' ').title()}."
         
-        # Generate recommendations
         recommendations = []
         if result.budget_analysis.get("budget_status") == "over_budget":
             recommendations.append("Consider extending your trip duration to spread costs")
@@ -457,64 +418,60 @@ async def plan_travel(request: Dict[str, Any]):
 async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
     """Simplified travel planning when LangGraph is not available"""
     try:
-        # Use the individual tools directly
         user_profile = analyze_user_preferences(
-            request.destination, 
-            request.preferences, 
-            request.budget, 
+            request.destination,
+            request.preferences,
+            request.budget,
             request.duration
         )
         
         flight_options = find_flight_options(
-            request.destination, 
-            request.start_date, 
-            request.budget, 
+            request.destination,
+            request.start_date,
+            request.budget,
             request.travelers
         )
         
         hotel_options = find_hotel_options(
-            request.destination, 
-            request.duration, 
-            request.budget, 
-            request.travelers, 
+            request.destination,
+            request.duration,
+            request.budget,
+            request.travelers,
             user_profile.get("travel_style", "balanced")
         )
         
         activity_options = find_activities(
-            request.destination, 
-            request.duration, 
-            request.preferences, 
+            request.destination,
+            request.duration,
+            request.preferences,
             request.budget
         )
         
         weather_info = get_weather_info(
-            request.destination, 
-            request.start_date, 
+            request.destination,
+            request.start_date,
             request.duration
         )
         
-        # Calculate costs
         flight_cost = sum(flight["price"] for flight in flight_options[:1]) * request.travelers
         hotel_cost = sum(hotel["price"] for hotel in hotel_options[:1]) * request.duration * request.travelers
         activity_cost = sum(activity["price"] for activity in activity_options)
         
         budget_analysis = analyze_budget(
-            flight_cost, 
-            hotel_cost, 
-            activity_cost, 
-            request.budget, 
+            flight_cost,
+            hotel_cost,
+            activity_cost,
+            request.budget,
             request.travelers
         )
         
-        # Create simple itinerary
         itinerary = create_itinerary(
-            activity_options, 
-            request.duration, 
-            weather_info, 
+            activity_options,
+            request.duration,
+            weather_info,
             weather_info.get("safety_alerts", [])
         )
         
-        # Generate summary
         summary = f"Your {request.duration}-day trip to {request.destination} is planned! "
         summary += f"Total cost: ${budget_analysis['total_cost']:.2f}. "
         summary += f"Style: {user_profile.get('travel_style', 'balanced').title()}. "
@@ -528,7 +485,6 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
         )
         
     except Exception as e:
-        # Return a basic response if everything fails
         return TravelResponse(
             itinerary=[],
             total_cost=0,
@@ -549,7 +505,6 @@ async def search_places(q: str):
         return []
     seen = set()
     results = []
-    # Suggest locations from hotels
     for hotel in HOTELS:
         name = hotel.get("location", "")
         if name and query in name.lower() and name not in seen:
@@ -557,7 +512,6 @@ async def search_places(q: str):
             seen.add(name)
             if len(results) >= 10:
                 break
-    # If not enough, add activity locations
     if len(results) < 10:
         for act in ACTIVITIES:
             name = act.get("location", "")
@@ -606,7 +560,6 @@ async def get_analytics_realtime():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Real-time analytics error: {str(e)}")
 
-# Backward/alternate path used by frontend (typo-safe)
 @app.get("/api/analytics/real-time")
 async def get_analytics_realtime_alias():
     return await get_analytics_realtime()

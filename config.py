@@ -8,7 +8,10 @@ from typing import Optional, List
 from enum import Enum
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field, field_validator
+from dotenv import load_dotenv # Import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 
 class EnvironmentEnum(str, Enum):
     development = "development"
@@ -123,7 +126,7 @@ class Settings(BaseSettings):
     # AI Model Settings
     # Default: use Google AI (Gemini) for chat
     AI_PROVIDER: str = Field(default="google", env="AI_PROVIDER")
-    AI_MODEL_NAME: str = Field(default="gemini-pro", env="AI_MODEL_NAME")
+    AI_MODEL_NAME: str = Field(default="gemini-1.5-flash", env="AI_MODEL_NAME")    
     AI_MAX_TOKENS: int = Field(default=4000, env="AI_MAX_TOKENS")
     AI_TEMPERATURE: float = Field(default=0.7, env="AI_TEMPERATURE")
 

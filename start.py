@@ -13,17 +13,19 @@ import platform
 import json
 from pathlib import Path
 
+import dotenv # Import dotenv library
+
 def print_banner():
     """Print startup banner"""
     print("""
     ╔══════════════════════════════════════════════════════════════╗
-    ║                    🚀 AI Travel Planning Agent              ║
+    ║                    🚀 AI Travel Planning Agent               ║
     ║                        NEXT LEVEL STARTUP                    ║
     ║                                                              ║
-    ║  ✨ Multi-Agent AI System     💬 Natural Language Chat      ║
-    ║  📊 Advanced Analytics        💳 Payment Integration        ║
-    ║  🌐 Real API Integrations    📱 Progressive Web App         ║
-    ║  🔒 Enterprise Security      📈 Business Intelligence       ║
+    ║  ✨ Multi-Agent AI System     💬 Natural Language Chat       ║
+    ║  📊 Advanced Analytics        💳 Payment Integration         ║
+    ║  🌐 Real API Integrations    📱 Progressive Web App          ║
+    ║  🔒 Enterprise Security      📈 Business Intelligence        ║
     ╚══════════════════════════════════════════════════════════════╝
     """)
 
@@ -62,7 +64,13 @@ def check_dependencies():
 def create_env_file():
     """Create environment configuration file"""
     print("\n⚙️ Creating environment configuration...")
-    
+
+    env_file = Path(".env")
+    if env_file.exists():
+        print("✅ .env file already exists. Skipping creation.")
+        print("⚠️  Please update your API keys in the existing .env file.")
+        return
+
     env_config = {
         "APP_NAME": "AI Travel Planning Agent",
         "APP_VERSION": "2.0.0",
@@ -81,7 +89,7 @@ def create_env_file():
         # AI Configuration
         "OPENAI_API_KEY": "your_openai_api_key_here",
         "ANTHROPIC_API_KEY": "your_anthropic_api_key_here",
-        "GOOGLE_API_KEY": "your_google_api_key_here",
+        "GOOGLE_AI_API_KEY": "your_google_api_key_here",
         
         # Payment Configuration
         "STRIPE_SECRET_KEY": "sk_test_your_stripe_secret_key",
@@ -110,7 +118,7 @@ def create_env_file():
     }
     
     # Create .env file
-    with open(".env", "w") as f:
+    with open(env_file, "w") as f:
         for key, value in env_config.items():
             f.write(f"{key}={value}\n")
     
@@ -273,6 +281,8 @@ def run_health_check():
 
 def main():
     """Main startup function"""
+    # Load environment variables first
+    dotenv.load_dotenv()
     print_banner()
     
     # Check prerequisites
