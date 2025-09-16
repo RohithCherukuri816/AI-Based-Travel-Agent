@@ -21,7 +21,7 @@ load_dotenv()
 # Try to import LangGraph and LangChain components
 try:
     from langgraph.graph import StateGraph, END
-    from langgraph.prebuilt import ToolExecutor
+    from langgraph.prebuilt import ToolNode
     from langchain_core.tools import tool
     from langchain_core.messages import HumanMessage, AIMessage
     LANGGRAPH_AVAILABLE = True
@@ -36,7 +36,7 @@ except ImportError as e:
         def set_entry_point(self, *args, **kwargs): pass
         def compile(self): return None
     class END: pass
-    class ToolExecutor: pass
+    class ToolNode: pass
     def tool(func): return func
     class HumanMessage:
         def __init__(self, *args, **kwargs): pass
@@ -295,51 +295,63 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
     """Create a day-by-day itinerary with optimal scheduling"""
     itinerary = []
     
-    activities_per_day = len(activities) // duration
-    remaining_activities = len(activities) % duration
+    # Sort activities by rating to prioritize better options
+    activities.sort(key=lambda x: (-x.get("rating", 0), x.get("price", 0)))
+    
+    # Simple distribution of activities
+    activities_by_day = [[] for _ in range(duration)]
+    for i, activity in enumerate(activities):
+        day_index = i % duration
+        activities_by_day[day_index].append(activity)
     
     start_dt = datetime.fromisoformat(start_date)
     
     for day in range(1, duration + 1):
-        day_activities = activities[(day-1) * activities_per_day:day * activities_per_day]
-        if day <= remaining_activities:
-            # Correctly handle remaining activities
-            day_activities.append(activities[len(day_activities) + (day-1)])
-        
+        day_activities = activities_by_day[day-1]
         day_weather = weather_info.get("forecast", [])
         weather_condition = day_weather[day-1] if day-1 < len(day_weather) else {"condition": "Unknown", "precipitation": 0}
         
+        # Filter activities based on weather
+        scheduled_activities = []
+        for activity in day_activities:
+            # Skip outdoor activities if precipitation is high
+            if weather_condition.get("precipitation", 0) > 50 and "outdoor" in activity.get("tags", []):
+                continue
+            scheduled_activities.append(activity)
+
+        # Distribute remaining activities into time slots (morning/afternoon/evening)
         morning_activities = []
         afternoon_activities = []
         evening_activities = []
         
-        for activity in day_activities:
-            if weather_condition.get("precipitation", 0) > 50 and "outdoor" in activity.get("tags", []):
-                continue
-            
+        # Distribute activities based on 'bestTime' and fallback
+        for activity in scheduled_activities:
             if activity.get("bestTime") == "Morning":
                 morning_activities.append(activity)
+            elif activity.get("bestTime") == "Afternoon":
+                afternoon_activities.append(activity)
             elif activity.get("bestTime") == "Evening":
                 evening_activities.append(activity)
-            else:
+            else: # Fallback for activities with no specified time
                 afternoon_activities.append(activity)
         
         day_schedule = {
             "day": day,
             "date": (start_dt + timedelta(days=day-1)).strftime("%Y-%m-%d"),
             "weather": weather_condition,
-            "morning": morning_activities[:2],
-            "afternoon": afternoon_activities[:2],
-            "evening": evening_activities[:1],
-            "total_activities": len(morning_activities) + len(afternoon_activities) + len(evening_activities),
-            "estimated_cost": sum(act.get("price", 0) for act in day_activities),
+            "morning": morning_activities,
+            "afternoon": afternoon_activities,
+            "evening": evening_activities,
+            "total_activities": len(scheduled_activities),
+            "estimated_cost": sum(act.get("price", 0) for act in scheduled_activities),
             "travel_tips": []
         }
         
+        # Add travel tips based on weather and safety
         if weather_condition.get("precipitation", 0) > 50:
-            day_schedule["travel_tips"].append("Bring umbrella and waterproof clothing")
+            day_schedule["travel_tips"].append("Bring umbrella and waterproof clothing.")
         if weather_condition.get("temperature", 20) > 30:
-            day_schedule["travel_tips"].append("Stay hydrated and avoid outdoor activities during peak heat")
+            day_schedule["travel_tips"].append("Stay hydrated and avoid outdoor activities during peak heat.")
         
         for alert in safety_alerts:
             if alert.get("severity") in ["High", "Medium"]:
@@ -541,15 +553,6 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
             total_cost=budget_analysis["total_cost"],
             summary=summary,
             recommendations=budget_analysis.get("recommendations", [])
-        )
-        
-    except Exception as e:
-        print(f"Error in simplified_travel_planning: {e}")
-        return TravelResponse(
-            itinerary=[],
-            total_cost=0,
-            summary=f"Trip planning to {request.destination} is temporarily unavailable. Please try again later.",
-            recommendations=["Please try again later or contact support if the issue persists."]
         )
         
     except Exception as e:

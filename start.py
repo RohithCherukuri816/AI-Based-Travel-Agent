@@ -19,13 +19,13 @@ def print_banner():
     """Print startup banner"""
     print("""
     ╔══════════════════════════════════════════════════════════════╗
-    ║                    🚀 AI Travel Planning Agent               ║
-    ║                        NEXT LEVEL STARTUP                    ║
+    ║                 🚀 AI Travel Planning Agent                  ║
+    ║                       NEXT LEVEL STARTUP                     ║
     ║                                                              ║
     ║  ✨ Multi-Agent AI System     💬 Natural Language Chat       ║
-    ║  📊 Advanced Analytics        💳 Payment Integration         ║
+    ║  📊 Advanced Analytics      💳 Payment Integration           ║
     ║  🌐 Real API Integrations    📱 Progressive Web App          ║
-    ║  🔒 Enterprise Security      📈 Business Intelligence        ║
+    ║  🔒 Enterprise Security     📈 Business Intelligence         ║
     ╚══════════════════════════════════════════════════════════════╝
     """)
 

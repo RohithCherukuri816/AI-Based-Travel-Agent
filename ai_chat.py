@@ -23,8 +23,6 @@ try:
     from langchain.agents import initialize_agent, AgentType
     from langchain.tools import Tool
     from langchain.memory import ConversationBufferMemory
-    from langchain_openai import ChatOpenAI
-    from langchain_anthropic import ChatAnthropic
     from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
     from langchain_core.prompts import ChatPromptTemplate
     LANGCHAIN_AVAILABLE = True
@@ -35,6 +33,21 @@ except ImportError:
 from config import get_ai_config
 from real_apis import WeatherAPI, PlacesAPI, FlightAPI, HotelAPI
 from models import ChatSession, ChatMessage, User, Trip
+
+# Conditionally import LangChain OpenAI and Anthropic
+_LANGCHAIN_OPENAI_AVAILABLE = False
+try:
+    from langchain_openai import ChatOpenAI
+    _LANGCHAIN_OPENAI_AVAILABLE = True
+except ImportError:
+    pass
+
+_LANGCHAIN_ANTHROPIC_AVAILABLE = False
+try:
+    from langchain_anthropic import ChatAnthropic
+    _LANGCHAIN_ANTHROPIC_AVAILABLE = True
+except ImportError:
+    pass
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -119,17 +132,15 @@ class AIChatManager:
         else:
             logger.warning("Google AI is not enabled in the configuration.")
 
-        if LANGCHAIN_AVAILABLE and self.ai_config.get("openai", {}).get("enabled"):
+        if _LANGCHAIN_OPENAI_AVAILABLE and self.ai_config.get("openai", {}).get("enabled"):
             try:
-                from langchain_openai import ChatOpenAI
                 self.openai_llm = ChatOpenAI(model=self.ai_config["openai"]["model"])
             except Exception as e:
                 logger.error(f"Failed to initialize OpenAI client: {e}")
                 self.openai_llm = None
         
-        if LANGCHAIN_AVAILABLE and self.ai_config.get("anthropic", {}).get("enabled"):
+        if _LANGCHAIN_ANTHROPIC_AVAILABLE and self.ai_config.get("anthropic", {}).get("enabled"):
             try:
-                from langchain_anthropic import ChatAnthropic
                 self.anthropic_llm = ChatAnthropic(model=self.ai_config["anthropic"]["model"])
             except Exception as e:
                 logger.error(f"Failed to initialize Anthropic client: {e}")
@@ -168,9 +179,9 @@ class AIChatManager:
                             logger.error(f"Gemini API error: {e}")
                             return "I'm having trouble connecting to the AI service. Please try again."
                 llm = GeminiLLM(self.gemini_model)
-        elif self.ai_config["openai"]["enabled"] and getattr(self, "openai_llm", None):
+        elif _LANGCHAIN_OPENAI_AVAILABLE and getattr(self, "openai_llm", None):
             llm = self.openai_llm
-        elif self.ai_config["anthropic"]["enabled"] and getattr(self, "anthropic_llm", None):
+        elif _LANGCHAIN_ANTHROPIC_AVAILABLE and getattr(self, "anthropic_llm", None):
             llm = self.anthropic_llm
         
         if llm:
