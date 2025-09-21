@@ -10,13 +10,13 @@ from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, 
     ForeignKey, JSON, Enum as SQLEnum, Index, UniqueConstraint
 )
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship, Mapped, mapped_column
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from pydantic import BaseModel, Field, validator
 import uuid
+from .database import Base # Import Base from database.py
 
-Base = declarative_base()
+# Base = declarative_base() # Removed as Base is now imported
 
 
 # Enums

@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 from typing import List, Dict, Any, Optional, Tuple, Annotated
 from dataclasses import dataclass
 from enum import Enum
+from uuid import UUID # Added for database operations
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -32,7 +33,8 @@ LANGCHAIN_AVAILABLE = True
 
 from config import get_ai_config
 from real_apis import WeatherAPI, PlacesAPI, FlightAPI, HotelAPI, WikipediaAPI, EventbriteAPI, get_weather, search_places, get_wikipedia_summary, search_events, get_directions, api_manager # Import the utility functions from real_apis
-from models import ChatSession, ChatMessage, User, Trip
+from models import ChatSession, ChatMessage, User, Trip, Booking, Review
+from database import SessionLocal, get_db, init_db # Import database utilities
 
 # Conditionally import LangGraph prebuilt tools
 from langgraph.prebuilt import ToolNode # Corrected import
@@ -62,6 +64,15 @@ class ChatContext:
     current_location: Optional[Dict[str, float]] = None # New field for user's current GPS location
     suggested_places: List[Dict[str, Any]] = None # To track suggested places and prevent duplicates
     conversation_history: List[Dict[str, Any]] = None # To store the conversation history
+    
+    # New fields for detailed requirement gathering
+    destination_type: Optional[str] = None # beach, mountains, cultural, adventure, etc.
+    purpose: Optional[str] = None # honeymoon, family, business, leisure
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    accommodation_type: Optional[str] = None # hotel, resort, hostel, Airbnb
+    transport_mode: Optional[str] = None # flight, train, car, bus
+    special_needs: List[str] = None # dietary restrictions, accessibility needs
 
     def __post_init__(self):
         if self.preferences is None:
@@ -70,6 +81,8 @@ class ChatContext:
             self.conversation_history = []
         if self.suggested_places is None:
             self.suggested_places = []
+        if self.special_needs is None:
+            self.special_needs = []
 
 
 def _extract_json(text: str) -> Optional[str]:
@@ -102,6 +115,7 @@ class AIChatManager:
         self._init_ai_clients()
         self.tools = self._create_travel_tools()
         self.agent_graph = self._create_langgraph_agent()
+        init_db() # Initialize the database when AIChatManager is instantiated
 
     def _init_ai_clients(self):
         """Initialize AI service clients based on config"""
@@ -228,16 +242,197 @@ class AIChatManager:
             return "Hotel search functionality is available. Please provide destination, dates, and preferences."
 
         @langchain_tool
-        def calculate_budget(query: str) -> str:
-            """Calculate estimated costs for different travel components"""
-            return "I can help you estimate travel costs."
+        async def calculate_budget(destination: str, num_travelers: int, duration: int, accommodation_type: str = "standard", transport_mode: str = "flight", budget_tier: str = "standard") -> str:
+            """Calculate estimated costs for different travel components (transport, accommodation, meals, activities, insurance, taxes).
+            Offers 3 tiers: Budget, Standard, Luxury. Returns a detailed cost breakdown.
+            """
+            # This is a placeholder for actual budget calculation logic.
+            # In a real scenario, this would involve:
+            # 1. Fetching real-time pricing data for flights, hotels, activities based on destination, dates, etc.
+            # 2. Applying multipliers/logic for different budget tiers.
+            
+            base_costs = {
+                "flight": 300,  # Per person, per direction
+                "accommodation_per_night": 100, # Per person
+                "meals_per_day": 50, # Per person
+                "activities_per_day": 70, # Per person
+                "insurance": 30, # Per person
+                "taxes_fees_per_day": 20 # Per person
+            }
+            
+            tier_multipliers = {
+                "budget": {"flight": 0.7, "accommodation_per_night": 0.6, "meals_per_day": 0.5, "activities_per_day": 0.6, "insurance": 1.0, "taxes_fees_per_day": 1.0},
+                "standard": {"flight": 1.0, "accommodation_per_night": 1.0, "meals_per_day": 1.0, "activities_per_day": 1.0, "insurance": 1.0, "taxes_fees_per_day": 1.0},
+                "luxury": {"flight": 1.5, "accommodation_per_night": 2.0, "meals_per_day": 2.0, "activities_per_day": 1.5, "insurance": 1.2, "taxes_fees_per_day": 1.2},
+            }
+            
+            selected_multiplier = tier_multipliers.get(budget_tier.lower(), tier_multipliers["standard"])
+            
+            total_flight_cost = base_costs["flight"] * num_travelers * 2 * selected_multiplier["flight"] # Round trip
+            total_accommodation_cost = base_costs["accommodation_per_night"] * num_travelers * duration * selected_multiplier["accommodation_per_night"]
+            total_meals_cost = base_costs["meals_per_day"] * num_travelers * duration * selected_multiplier["meals_per_day"]
+            total_activities_cost = base_costs["activities_per_day"] * num_travelers * duration * selected_multiplier["activities_per_day"]
+            total_insurance_cost = base_costs["insurance"] * num_travelers * selected_multiplier["insurance"]
+            total_taxes_fees_cost = base_costs["taxes_fees_per_day"] * num_travelers * duration * selected_multiplier["taxes_fees_per_day"]
+            
+            total_estimated_cost = sum([
+                total_flight_cost,
+                total_accommodation_cost,
+                total_meals_cost,
+                total_activities_cost,
+                total_insurance_cost,
+                total_taxes_fees_cost
+            ])
+            
+            cost_breakdown = {
+                "destination": destination,
+                "num_travelers": num_travelers,
+                "duration": duration,
+                "budget_tier": budget_tier,
+                "breakdown": {
+                    "transport_mode": transport_mode,
+                    "flights": round(total_flight_cost, 2),
+                    "accommodation_type": accommodation_type,
+                    "accommodation": round(total_accommodation_cost, 2),
+                    "meals": round(total_meals_cost, 2),
+                    "activities": round(total_activities_cost, 2),
+                    "insurance": round(total_insurance_cost, 2),
+                    "taxes_fees": round(total_taxes_fees_cost, 2)
+                },
+                "total_estimated_cost": round(total_estimated_cost, 2)
+            }
+            
+            return json.dumps(cost_breakdown, indent=2)
 
         @langchain_tool
-        def plan_itinerary(query: str) -> str:
-            """Create a day-by-day itinerary based on preferences and constraints"""
-            return "I can create a personalized itinerary for you!"
+        async def simulate_booking(user_id: str, trip_id: str, booking_details: str) -> str:
+            """Simulate booking for a trip and generate a booking ID and confirmation.
+            The booking_details should be a JSON string representing the finalized itinerary or selected booking components.
+            """
+            # In a real application, this would integrate with actual booking APIs.
+            # For this simulation, we'll generate a dummy booking ID and confirmation.
+            
+            try:
+                parsed_booking_details = json.loads(booking_details)
+            except json.JSONDecodeError:
+                return f"Invalid JSON for booking_details: {booking_details}"
+                
+            with SessionLocal() as db:
+                try:
+                    new_booking = await self._save_booking_in_db(db, user_id, trip_id, parsed_booking_details)
+                    booking_id = str(new_booking.id)
+                    confirmation_message = f"Your booking for Trip ID {trip_id} has been confirmed! Your booking ID is {booking_id}.\nDetails: {json.dumps(parsed_booking_details, indent=2)}"
+                    
+                    booking_confirmation = {
+                        "booking_id": booking_id,
+                        "trip_id": trip_id,
+                        "user_id": user_id,
+                        "status": "confirmed",
+                        "timestamp": datetime.utcnow().isoformat(),
+                        "details": parsed_booking_details
+                    }
+                    return json.dumps(booking_confirmation, indent=2)
+                except Exception as e:
+                    logger.error(f"Error saving booking to DB: {e}")
+                    return f"Failed to simulate booking due to a database error: {e}"
 
-        return [get_current_weather, search_nearby_places, get_cultural_historical_context, search_local_events, get_travel_directions, find_flights, find_hotels, calculate_budget, plan_itinerary]
+        @langchain_tool
+        async def plan_itinerary(user_id: str, destination: str, start_date: str, end_date: str, preferences: List[str], num_travelers: int, budget: Optional[str] = None) -> str:
+            """Create a day-by-day itinerary based on preferences and constraints, including sightseeing, activities, and rest periods. 
+            Suggest backup options for weather-sensitive activities. Provide both a JSON and human-readable version.
+            """
+            # This is a placeholder for the actual itinerary generation logic.
+            # In a real scenario, this would involve complex logic:
+            # 1. Calling various APIs (weather, places, events) for data.
+            # 2. Using an LLM to creatively generate activities based on preferences.
+            # 3. Structuring the output day-by-day.
+            
+            itinerary_draft = {
+                "destination": destination,
+                "start_date": start_date,
+                "end_date": end_date,
+                "preferences": preferences,
+                "num_travelers": num_travelers,
+                "budget": budget,
+                "days": []
+            }
+            
+            # Determine duration
+            start_dt_obj = datetime.strptime(start_date, "%Y-%m-%d")
+            end_dt_obj = datetime.strptime(end_date, "%Y-%m-%d")
+            duration = (end_dt_obj - start_dt_obj).days + 1
+
+            # Save the trip to the database
+            with SessionLocal() as db:
+                trip_data = {
+                    "title": f"Trip to {destination}",
+                    "destination": destination,
+                    "start_date": start_date,
+                    "end_date": end_date,
+                    "duration": duration,
+                    "budget": 0.0, # Budget will be calculated later or passed explicitly
+                    "travel_style": ", ".join(preferences), # Simple concatenation for now
+                    "travelers_count": num_travelers,
+                    "metadata": {"preferences": preferences, "initial_budget_tier": budget} # Store full preferences
+                }
+                new_trip = await self._create_trip_in_db(db, user_id, trip_data)
+                trip_id = str(new_trip.id)
+                
+                # Update the ChatSession with the new trip_id
+                chat_session = db.query(ChatSession).filter_by(user_id=UUID(user_id)).order_by(ChatSession.created_at.desc()).first() # Get the latest session
+                if chat_session:
+                    chat_session.trip_id = UUID(trip_id)
+                    db.commit()
+                    db.refresh(chat_session)
+                    logger.info(f"Updated chat session {chat_session.id} with trip ID {trip_id}.")
+                
+                # Simulate itinerary generation for the duration
+                for i in range(duration):
+                    current_date = start_dt_obj + timedelta(days=i)
+                    day_data = {
+                        "day": i + 1,
+                        "date": current_date.isoformat(),
+                        "activities": [
+                            {"time": "Morning", "description": f"Explore {destination} area.", "type": "sightseeing", "backup_option": "Indoor activity if bad weather."},
+                            {"time": "Afternoon", "description": "Lunch at a local eatery.", "type": "food"},
+                            {"time": "Evening", "description": "Leisure or cultural experience.", "type": "leisure"}
+                        ],
+                        "notes": f"Day {i+1} activities in {destination}"
+                    }
+                    await self._save_itinerary_day_in_db(db, trip_id, day_data)
+                    itinerary_draft["days"].append(day_data)
+            
+            json_output = json.dumps(itinerary_draft, indent=2)
+            
+            human_readable_output = f"""
+            **Here is your drafted itinerary for {destination} from {start_date} to {end_date}:**
+
+            """
+            for day_plan in itinerary_draft["days"]:
+                human_readable_output += f"**Day {day_plan['day']} ({day_plan['date']}):**\n"
+                for activity in day_plan["activities"]:
+                    human_readable_output += f"- {activity['time']}: {activity['description']}\n"
+                    if "backup_option" in activity:
+                        human_readable_output += f"  (Backup: {activity['backup_option']})\n"
+                human_readable_output += "\n"
+                
+            return f"""JSON Itinerary: {json_output}
+            Human Readable Itinerary: {human_readable_output}
+            """
+        
+        @langchain_tool
+        async def submit_feedback(user_id: str, trip_id: str, rating: int, comments: Optional[str] = None) -> str:
+            """Submit post-trip feedback for a trip, including a rating (1-5) and optional comments.
+            """
+            with SessionLocal() as db:
+                try:
+                    new_review = await self._save_review_in_db(db, user_id, trip_id, rating, content=comments)
+                    return f"Thank you for your feedback! Your review for trip {trip_id} (Rating: {rating}) has been saved. Review ID: {new_review.id}"
+                except Exception as e:
+                    logger.error(f"Error submitting feedback to DB: {e}")
+                    return f"Failed to submit feedback due to a database error: {e}"
+
+        return [get_current_weather, search_nearby_places, get_cultural_historical_context, search_local_events, get_travel_directions, find_flights, find_hotels, calculate_budget, plan_itinerary, simulate_booking, submit_feedback]
 
 
     def _create_langgraph_agent(self):
@@ -252,21 +447,71 @@ class AIChatManager:
         logger.info("ChatGoogleGenerativeAI client initialized for LangGraph.")
 
         system_prompt = """
-        You are a friendly, knowledgeable tourist guide. Your primary goal is to recommend attractions, restaurants, and activities based on the user's current location, preferences, and weather.
-        **ALWAYS use the user's current location from the chat context for any location-based queries or tool calls.** Do not ask for the location if it is already provided in the context.
+        You are an AI-powered travel agent named 'TravelBot'. Your goal is to help users plan their dream trips step by step, replicating the full workflow of a real travel agency.
         
-        **IMPORTANT: You MUST use the available tools to get information for the user's requests.**
-        - For questions about attractions or places of interest, use the `search_nearby_places` tool.
-        - For restaurant suggestions or food-related queries, use the `search_nearby_places` tool with `type="restaurant"`.
-        - For weather information, use the `get_current_weather` tool.
-        - For local events, use the `search_local_events` tool.
-        - For directions or routes, use the `get_travel_directions` tool.
-        - For cultural or historical context about a specific place, use the `get_cultural_historical_context` tool.
-
-        Always include cultural insights, history, or fun facts.
-        When providing recommendations, present them in a structured JSON format with the following sections: Attractions, Food, Events, Weather Tip, Suggested Route. **Ensure these sections are populated with relevant information gathered from tool calls.**
-        If you suggest a route, include estimated distance and duration. If cultural context is available, weave it into the attraction descriptions.
-        Ensure all JSON output is valid and properly escaped.
+        **Workflow Steps:**
+        
+        1.  **Requirement Gathering (User Preferences):**
+            - Start by greeting the user warmly and introducing yourself as their AI travel agent. 
+            - **Crucially, begin asking structured questions one by one to gather detailed user preferences for their trip.** This includes:
+                - **Destination (City/Country):** Where do they want to go?
+                - **Destination Type:** (e.g., beach, mountains, cultural, adventure, relaxation)
+                - **Purpose of Trip:** (e.g., honeymoon, family vacation, business, leisure, solo adventure)
+                - **Travel Dates/Duration:** When do they plan to travel? How long will the trip be (number of days)?
+                - **Number of Travelers:** How many adults, children, and infants?
+                - **Budget Range:** What is their approximate budget (e.g., low, medium, high, or a specific amount)?
+                - **Accommodation Type:** (e.g., hotel, resort, hostel, Airbnb, guesthouse)
+                - **Preferred Transport Mode:** (e.g., flight, train, car, bus, cruise)
+                - **Special Needs/Interests:** Any dietary restrictions, accessibility needs, specific activities, or interests (e.g., historical sites, art, nightlife, nature)?
+            - **Ask one question at a time and wait for the user's response.** Acknowledge their input and then ask the next relevant question.
+            - **Prioritize gathering all essential information before moving to the next stage.**
+            - **Dynamically update the ChatContext with gathered information.**
+            
+        2.  **Research & Options (using Tools):**
+            - Once you have initial requirements, proactively use your tools to research and present options.
+            - Use `get_current_weather` for weather conditions.
+            - Use `search_nearby_places` for attractions, restaurants, and activities.
+            - Use `get_cultural_historical_context` for background information.
+            - Use `search_local_events` for events in the destination.
+            - Use `get_travel_directions` for route planning.
+            - Use `find_flights` and `find_hotels` to explore travel and accommodation options.
+            - Present a few diverse options to the user and ask for their preferences.
+            
+        3.  **Draft Itinerary Creation:**
+            - After gathering preferences and researching options, use the `plan_itinerary` tool to create a day-wise itinerary.
+            - Ensure the itinerary includes sightseeing, activities, and rest periods, suggesting backup options for weather-sensitive activities.
+            - Provide both a human-readable summary and the full JSON output (if requested or for system use).
+            
+        4.  **Costing & Package Generation:**
+            - Use the `calculate_budget` tool to provide a detailed cost breakdown based on transport, accommodation, meals, activities, insurance, and taxes.
+            - Offer different tiers: Budget, Standard, Luxury, and ask the user to choose.
+            
+        5.  **Customization & Feedback:**
+            - Allow the user to modify preferences (e.g., upgrade hotel, remove an activity, adjust dates).
+            - Dynamically re-generate the plan using your tools and LLM capabilities based on their feedback.
+            
+        6.  **Booking & Confirmation:**
+            - Once the user finalizes the plan, use the `simulate_booking` tool to generate a mock booking ID and confirmation. Inform the user of the confirmation.
+            
+        7.  **During Trip Support (Real-time Guide):**
+            - If the user provides their current GPS location (from `context.current_location`):
+                - Act as a real-time guide, providing suggestions and information about their immediate location (top attractions, events).
+                - Use `get_current_weather` for live weather updates.
+                - Use `get_travel_directions` for re-routing and navigation assistance.
+                - Use `search_nearby_places` to suggest nearby points of interest.
+                - **ALWAYS** use the provided `context.current_location` for location-based tool calls if the user's query implies "near me" or doesn't specify a different location.
+            
+        8.  **Post-Trip Follow-Up:**
+            - After the trip dates have passed, engage the user for feedback (rating and comments) to improve future recommendations.
+            
+        **General Instructions:**
+        - Maintain a friendly, helpful, and professional tone throughout the interaction.
+        - Always strive to fulfill the user's request using the most appropriate tools.
+        - If a tool call is needed, provide the required arguments clearly.
+        - When presenting options or information, ensure it is clear, concise, and easy for the user to understand.
+        - If you need more information to use a tool, ask specific clarifying questions.
+        - Ensure all JSON output is valid and properly escaped.
+        
         """
         prompt = ChatPromptTemplate.from_messages([
             ("system", system_prompt),
@@ -281,6 +526,8 @@ class AIChatManager:
         class AgentState(Dict[str, Any]):
             messages: Annotated[List[BaseMessage], add_messages]
             current_location: Optional[Dict[str, float]] = None # Add current_location to the agent state
+            user_id: str # Add user_id to the agent state
+            trip_id: Optional[str] = None # Add trip_id to the agent state
             
         # tool_executor = ToolExecutor(self.tools) # Removed ToolExecutor
         tool_node = ToolNode(self.tools)
@@ -309,16 +556,21 @@ class AIChatManager:
             # This might require modifying ToolNode's behavior or passing it explicitly if tools are invoked manually.
             last_message = state["messages"][-1]
             current_location = state.get("current_location")
+            user_id = state.get("user_id") # Get user_id from state
+            trip_id = state.get("trip_id") # Get trip_id from state
             
             if last_message.tool_calls:
                 modified_tool_calls = []
                 for tool_call in last_message.tool_calls:
-                    # Inject current_location into tool arguments
+                    # Inject current_location, user_id, and trip_id into tool arguments
                     modified_args = self._inject_location_into_tool_args(
                         tool_call["name"],
                         tool_call["args"],
                         current_location
                     )
+                    if "user_id" not in modified_args: modified_args["user_id"] = user_id
+                    if "trip_id" not in modified_args: modified_args["trip_id"] = trip_id
+                    
                     modified_tool_calls.append({"name": tool_call["name"], "args": modified_args, "id": tool_call["id"]}) # Include the 'id'
                 
                 # Create a new message with modified tool calls for the ToolNode
@@ -355,7 +607,7 @@ class AIChatManager:
 
             # Use LangGraph to invoke the agent
             if self.agent_graph:
-                inputs = {"messages": [user_message_obj], "current_location": context.current_location}
+                inputs = {"messages": [user_message_obj], "current_location": context.current_location, "user_id": user_id, "trip_id": context.trip_id}
                 result = await self.agent_graph.ainvoke(inputs, config={"recursion_limit": 50})
                 ai_response_obj = result["messages"][-1]
                 
@@ -391,32 +643,44 @@ class AIChatManager:
 
 
     async def _format_ai_response(self, raw_response: str, context: ChatContext) -> Dict[str, Any]:
-        """Formats the AI's raw response into a structured JSON output."""
-        # This is a complex task that would ideally involve the LLM itself
-        # For now, let's try to extract and structure common elements.
-        # In a more advanced scenario, we might use a tool call from the LLM
-        # to explicitly generate this JSON structure.
-
+        """Formats the AI's raw response into a structured JSON output, handling various tool outputs."""
         structured_output = {
             "Attractions": [],
             "Food": [],
             "Events": [],
             "Weather Tip": "",
-            "Suggested Route": {}
+            "Suggested Route": {},
+            "Itinerary": {},
+            "Cost Breakdown": {},
+            "Booking Confirmation": {}
         }
 
-        # Try to parse any JSON embedded in the raw response first
-        json_match = re.search(r'```json\n(.*?)```', raw_response, re.DOTALL)
+        # Try to parse any JSON embedded in the raw response
+        json_match = re.search(r'```json\n(.*?)\n```', raw_response, re.DOTALL)
         if json_match:
             try:
                 parsed_json = json.loads(json_match.group(1))
-                # If the LLM directly provides the structure, use it
-                if all(key in parsed_json for key in structured_output.keys()):
-                    return parsed_json
+                
+                # Check for specific tool outputs and format accordingly
+                if "days" in parsed_json and "destination" in parsed_json: # Likely Itinerary
+                    structured_output["Itinerary"] = parsed_json
+                    # Generate human-readable part from itinerary for direct display if needed
+                    structured_output["General Content"] = self._format_itinerary_to_human_readable(parsed_json)
+                    return structured_output
+                elif "total_estimated_cost" in parsed_json and "breakdown" in parsed_json: # Likely Cost Breakdown
+                    structured_output["Cost Breakdown"] = parsed_json
+                    structured_output["General Content"] = self._format_cost_breakdown_to_human_readable(parsed_json)
+                    return structured_output
+                elif "booking_id" in parsed_json and "status" in parsed_json: # Likely Booking Confirmation
+                    structured_output["Booking Confirmation"] = parsed_json
+                    structured_output["General Content"] = self._format_booking_confirmation_to_human_readable(parsed_json)
+                    return structured_output
+                elif all(key in parsed_json for key in ["Attractions", "Food", "Events"]): # General tourist guide output
+                    return parsed_json # If LLM already provided the full structure
             except json.JSONDecodeError:
                 pass # Fallback to regex-based extraction
 
-        # Fallback to regex-based extraction and heuristics
+        # Fallback to regex-based extraction and heuristics for general recommendations
         # This part would need significant refinement to be robust.
 
         # Example: Extracting attractions
@@ -444,11 +708,68 @@ class AIChatManager:
             structured_output["Suggested Route"] = {"description": route_info}
 
         # If no specific sections were extracted, put the whole response into a general content field
-        if not any(structured_output.values()) and "General Content" not in structured_output:
+        if not any(v for k, v in structured_output.items() if k not in ["Itinerary", "Cost Breakdown", "Booking Confirmation"]) and "General Content" not in structured_output:
             structured_output["General Content"] = raw_response
 
         return structured_output
 
+    def _format_itinerary_to_human_readable(self, itinerary_json: Dict[str, Any]) -> str:
+        """Formats an itinerary JSON into a human-readable string."""
+        human_readable_output = f"""
+        **Here is your drafted itinerary for {itinerary_json.get("destination", "Unknown")} from {itinerary_json.get("start_date", "Unknown")} to {itinerary_json.get("end_date", "Unknown")}:**
+
+        """
+        for day_plan in itinerary_json.get("days", []):
+            human_readable_output += f"**Day {day_plan.get('day', 'N/A')} ({day_plan.get('date', 'N/A')}):**\n"
+            for activity in day_plan.get("activities", []) :
+                human_readable_output += f"- {activity.get('time', 'N/A')}: {activity.get('description', 'N/A')}\n"
+                if "backup_option" in activity:
+                    human_readable_output += f"  (Backup: {activity['backup_option']})\n"
+            human_readable_output += "\n"
+        return human_readable_output
+
+    def _format_cost_breakdown_to_human_readable(self, cost_breakdown_json: Dict[str, Any]) -> str:
+        """Formats a cost breakdown JSON into a human-readable string."""
+        breakdown = cost_breakdown_json.get("breakdown", {})
+        total_cost = cost_breakdown_json.get("total_estimated_cost", 0.0)
+        destination = cost_breakdown_json.get("destination", "Unknown")
+        budget_tier = cost_breakdown_json.get("budget_tier", "Standard")
+        
+        human_readable_output = f"""
+        **Estimated Cost for your {budget_tier} trip to {destination}:**
+
+        - Flights: ${breakdown.get("flights", 0.0):.2f}
+        - Accommodation ({breakdown.get("accommodation_type", "Standard")}): ${breakdown.get("accommodation", 0.0):.2f}
+        - Meals: ${breakdown.get("meals", 0.0):.2f}
+        - Activities: ${breakdown.get("activities", 0.0):.2f}
+        - Insurance: ${breakdown.get("insurance", 0.0):.2f}
+        - Taxes & Fees: ${breakdown.get("taxes_fees", 0.0):.2f}
+
+        **Total Estimated Cost: ${total_cost:.2f}**
+        """
+        return human_readable_output
+
+    def _format_booking_confirmation_to_human_readable(self, booking_json: Dict[str, Any]) -> str:
+        """Formats a booking confirmation JSON into a human-readable string."""
+        booking_id = booking_json.get("booking_id", "N/A")
+        trip_id = booking_json.get("trip_id", "N/A")
+        status = booking_json.get("status", "N/A")
+        details = booking_json.get("details", {})
+        
+        human_readable_output = f"""
+        **Booking Confirmation**
+
+        - Booking ID: {booking_id}
+        - Trip ID: {trip_id}
+        - Status: {status.capitalize()}
+        - Booking Type: {details.get("booking_type", "N/A")}
+        - Provider: {details.get("provider", "N/A")}
+        - Travel Date: {details.get("travel_date", "N/A")}
+        - Price: ${details.get("price", 0.0):.2f} {details.get("currency", "USD")}
+
+        Your booking has been successfully processed!
+        """
+        return human_readable_output
 
     # The following methods are for fallback and are not used by the new LangGraph agent
     async def _analyze_intent(self, message: str, context: ChatContext) -> Dict[str, Any]:
@@ -607,13 +928,86 @@ class AIChatManager:
 
     # Context management
     async def _get_or_create_context(self, user_id: str, session_id: Optional[str] = None, current_location: Optional[Dict[str, float]] = None) -> ChatContext:
-        # For now, we'll use a default location if not provided. This should be replaced with
-        # logic for real GPS location fetching
-        # In a real app, this would come from the frontend or a mobile API
-        if current_location is None:
-            current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
-        return ChatContext(user_id=user_id, trip_id=session_id, preferences=["culture", "food", "adventure"], travelers_count=2, current_location=current_location, suggested_places=[], conversation_history=[])
-    
+        
+        user_uuid = None
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}. Using a placeholder UUID.")
+            user_uuid = UUID('00000000-0000-0000-0000-000000000001') # Placeholder for testing
+
+        db_session = SessionLocal()
+        try:
+            if session_id:
+                chat_session = db_session.query(ChatSession).filter_by(id=UUID(session_id), user_id=user_uuid).first()
+                if chat_session:
+                    # Load existing context
+                    context_data = chat_session.context
+                    context = ChatContext(
+                        user_id=user_id,
+                        trip_id=str(chat_session.trip_id) if chat_session.trip_id else None,
+                        current_destination=context_data.get("current_destination"),
+                        travel_style=context_data.get("travel_style"),
+                        budget_range=tuple(context_data["budget_range"]) if "budget_range" in context_data else None,
+                        preferences=context_data.get("preferences", []),
+                        travelers_count=context_data.get("travelers_count", 1),
+                        trip_duration=context_data.get("trip_duration"),
+                        language=context_data.get("language", "en"),
+                        current_location=context_data.get("current_location"),
+                        suggested_places=context_data.get("suggested_places", []),
+                        conversation_history=context_data.get("conversation_history", []),
+                        destination_type=context_data.get("destination_type"),
+                        purpose=context_data.get("purpose"),
+                        start_date=context_data.get("start_date"),
+                        end_date=context_data.get("end_date"),
+                        accommodation_type=context_data.get("accommodation_type"),
+                        transport_mode=context_data.get("transport_mode"),
+                        special_needs=context_data.get("special_needs", []),
+                    )
+                    # Also load chat messages to rebuild history
+                    messages = db_session.query(ChatMessage).filter_by(session_id=chat_session.id).order_by(ChatMessage.created_at).all()
+                    context.conversation_history = [{
+                        "role": msg.role,
+                        "content": msg.content,
+                        "timestamp": msg.created_at.isoformat()
+                    } for msg in messages]
+                    logger.info(f"Loaded existing chat session {session_id} for user {user_id}.")
+                    return context
+
+            # If no session_id or session not found, create a new context and session
+            if current_location is None:
+                current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
+            
+            new_context = ChatContext(
+                user_id=user_id,
+                trip_id=session_id, # If no trip_id explicitly passed, use session_id for now
+                preferences=["culture", "food", "adventure"],
+                travelers_count=1,
+                current_location=current_location,
+                suggested_places=[],
+                conversation_history=[]
+            )
+            
+            # Create a new ChatSession in the database for the new context
+            new_session_id = session_id if session_id else str(UUID(user_id) if user_id else UUID.uuid4()) # Use user_id as session_id if not provided
+            new_chat_session = ChatSession(
+                id=UUID(new_session_id), # Ensure it's a UUID
+                user_id=user_uuid,
+                session_title="New Chat Session",
+                ai_model=AIModel.GEMINI_PRO.value,
+                context=new_context.__dict__,
+                is_active=True
+            )
+            db_session.add(new_chat_session)
+            db_session.commit()
+            db_session.refresh(new_chat_session)
+            
+            logger.info(f"Created new chat session {new_session_id} for user {user_id}.")
+            new_context.trip_id = str(new_chat_session.trip_id) if new_chat_session.trip_id else new_session_id # Update trip_id in context if it was None
+            return new_context
+        finally:
+            db_session.close()
+
     async def _save_chat_session(
         self,
         user_id: str,
@@ -623,43 +1017,252 @@ class AIChatManager:
         ai_response: AIMessage,
     ):
         try:
-            # In a real application, you would save this to a database
-            # For now, we'll just log it.
-            logger.info(f"Saving chat session for user {user_id}, session {session_id}")
+            with SessionLocal() as db:
+                # Find or create ChatSession
+                chat_session = db.query(ChatSession).filter_by(id=session_id).first()
+                if not chat_session:
+                    # This case should ideally not be hit if sessions are always created via `_get_or_create_context` or `create_new_session`
+                    logger.warning(f"Attempted to save message for non-existent session {session_id}. Creating new session.")
+                    chat_session = await self._create_chat_session_in_db(db, user_id, session_id, context)
+                else:
+                    # Update context if session exists
+                    chat_session.context = context.__dict__
+                    chat_session.updated_at = datetime.utcnow()
+                    db.commit()
+                    db.refresh(chat_session)
 
-            # Save user message
-            user_chat_message = ChatMessage(
-                session_id=session_id,
-                role="user",
-                content=user_message.content,
-                trip_metadata=context.__dict__,  # Store context as metadata for user message
-            )
+                # Save user message
+                user_chat_message = ChatMessage(
+                    session_id=chat_session.id,
+                    role="user",
+                    content=user_message.content,
+                    trip_metadata=context.__dict__,
+                )
+                db.add(user_chat_message)
 
-            # Save AI response
-            ai_chat_message = ChatMessage(
-                session_id=session_id,
-                role="assistant",
-                content=ai_response.content,
-                trip_metadata=context.__dict__,  # Store context as metadata for AI response
-            )
+                # Save AI response
+                ai_chat_message = ChatMessage(
+                    session_id=chat_session.id,
+                    role="assistant",
+                    content=ai_response.content,
+                    trip_metadata=context.__dict__,
+                )
+                db.add(ai_chat_message)
 
-            # This would typically be saved to a database, e.g., using an ORM
-            # print(f"Saved user message: {user_chat_message}")
-            # print(f"Saved AI response: {ai_chat_message}")
-            pass
+                db.commit()
+                logger.info(f"Chat session {session_id} and messages saved for user {user_id}.")
         except Exception as e:
             logger.error(f"Error saving chat session for user {user_id}, session {session_id}: {e}")
-            raise # Re-raise the exception to propagate it
+            raise
+
+    async def _create_chat_session_in_db(self, db, user_id: str, session_id: str, context: ChatContext):
+        from uuid import UUID
+        from models import User
+
+        user_uuid = None
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}. Using a placeholder UUID for session creation.")
+            user_uuid = UUID('00000000-0000-0000-0000-000000000001') # Placeholder for testing
+        
+        # Ensure user exists (for testing, create if not)
+        existing_user = db.query(User).filter_by(id=user_uuid).first()
+        if not existing_user:
+            logger.warning(f"User {user_id} not found. Creating a dummy user for session {session_id}.")
+            dummy_user = User(id=user_uuid, email=f"{user_id}@example.com", username=user_id, hashed_password="dummy_hash")
+            db.add(dummy_user)
+            db.commit()
+            db.refresh(dummy_user)
+
+        chat_session = ChatSession(
+            id=UUID(session_id),  # Ensure session_id is a UUID
+            user_id=user_uuid,
+            trip_id=UUID(context.trip_id) if context.trip_id else None,
+            session_title="New Chat Session", # Placeholder title
+            ai_model=AIModel.GEMINI_PRO.value,
+            context=context.__dict__,
+        )
+        db.add(chat_session)
+        db.commit()
+        db.refresh(chat_session)
+        return chat_session
+    
+    async def _create_trip_in_db(self, db, user_id: str, trip_data: Dict[str, Any]) -> Trip:
+        from uuid import UUID
+        from models import User, Trip, TripStatus
+        from datetime import datetime
+        
+        user_uuid = None
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}. Using a placeholder UUID for trip creation.")
+            user_uuid = UUID('00000000-0000-0000-0000-000000000001') # Placeholder for testing
+            
+        existing_user = db.query(User).filter_by(id=user_uuid).first()
+        if not existing_user:
+            logger.warning(f"User {user_id} not found. Creating a dummy user for trip.")
+            dummy_user = User(id=user_uuid, email=f"{user_id}@example.com", username=user_id, hashed_password="dummy_hash")
+            db.add(dummy_user)
+            db.commit()
+            db.refresh(dummy_user)
+            
+        new_trip = Trip(
+            owner_id=user_uuid,
+            title=trip_data.get("title", "New Trip"),
+            description=trip_data.get("description"),
+            destination=trip_data.get("destination", "Unknown"),
+            start_date=datetime.fromisoformat(trip_data["start_date"]) if "start_date" in trip_data else datetime.utcnow(),
+            end_date=datetime.fromisoformat(trip_data["end_date"]) if "end_date" in trip_data else (datetime.utcnow() + timedelta(days=1)),
+            duration=trip_data.get("duration", 1),
+            budget=trip_data.get("budget", 0.0),
+            status=TripStatus.PLANNING,
+            travel_style=trip_data.get("travel_style"),
+            travelers_count=trip_data.get("travelers_count", 1),
+            trip_metadata=trip_data.get("metadata", {})
+        )
+        db.add(new_trip)
+        db.commit()
+        db.refresh(new_trip)
+        logger.info(f"Created new trip {new_trip.id} for user {user_id}.")
+        return new_trip
+
+    async def _get_trip_from_db(self, db, trip_id: str) -> Optional[Trip]:
+        from uuid import UUID
+        from models import Trip
+        try:
+            trip_uuid = UUID(trip_id)
+            trip = db.query(Trip).filter_by(id=trip_uuid).first()
+            return trip
+        except ValueError:
+            logger.error(f"Invalid trip_id format: {trip_id}.")
+            return None
+            
+    async def _save_itinerary_day_in_db(self, db, trip_id: str, day_data: Dict[str, Any]):
+        from uuid import UUID
+        from models import ItineraryDay
+        from datetime import datetime
+
+        try:
+            trip_uuid = UUID(trip_id)
+        except ValueError:
+            logger.error(f"Invalid trip_id format: {trip_id}. Cannot save itinerary day.")
+            return None
+            
+        itinerary_day = ItineraryDay(
+            trip_id=trip_uuid,
+            day_number=day_data["day"],
+            date=datetime.fromisoformat(day_data["date"]),
+            activities=day_data.get("activities"),
+            weather_forecast=day_data.get("weather_forecast"),
+            notes=day_data.get("notes"),
+            estimated_cost=day_data.get("estimated_cost", 0.0)
+        )
+        db.add(itinerary_day)
+        db.commit()
+        db.refresh(itinerary_day)
+        logger.info(f"Saved itinerary day {day_data['day']} for trip {trip_id}.")
+        return itinerary_day
+
+    async def _save_booking_in_db(self, db, user_id: str, trip_id: str, booking_details: Dict[str, Any]) -> Booking:
+        from uuid import UUID
+        from models import Booking
+        from datetime import datetime
+        
+        user_uuid = None
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}. Cannot save booking.")
+            raise
+            
+        trip_uuid = None
+        try:
+            trip_uuid = UUID(trip_id)
+        except ValueError:
+            logger.error(f"Invalid trip_id format: {trip_id}. Cannot save booking.")
+            raise
+        
+        new_booking = Booking(
+            trip_id=trip_uuid,
+            user_id=user_uuid,
+            booking_type=booking_details.get("booking_type", "other"),
+            provider=booking_details.get("provider", "AI-Travel-Agent"),
+            booking_reference=booking_details.get("booking_reference", str(UUID.uuid4())),
+            confirmation_number=booking_details.get("confirmation_number", str(UUID.uuid4())[:8]),
+            status=booking_details.get("status", "confirmed"),
+            booking_date=datetime.fromisoformat(booking_details["booking_date"]) if "booking_date" in booking_details else datetime.utcnow(),
+            travel_date=datetime.fromisoformat(booking_details["travel_date"]) if "travel_date" in booking_details else datetime.utcnow(),
+            price=booking_details.get("price", 0.0),
+            currency=booking_details.get("currency", "USD"),
+            details=booking_details.get("details", {}),
+            cancellation_policy=booking_details.get("cancellation_policy")
+        )
+        db.add(new_booking)
+        db.commit()
+        db.refresh(new_booking)
+        logger.info(f"Saved new booking {new_booking.id} for trip {trip_id}.")
+        return new_booking
+
+    async def _save_review_in_db(self, db, user_id: str, trip_id: str, rating: int, title: Optional[str] = None, content: Optional[str] = None) -> Review:
+        from uuid import UUID
+        from models import Review, Trip # Import Trip to get destination
+        from datetime import datetime
+        
+        user_uuid = None
+        try:
+            user_uuid = UUID(user_id)
+        except ValueError:
+            logger.error(f"Invalid user_id format: {user_id}. Cannot save review.")
+            raise
+            
+        trip_uuid = None
+        try:
+            trip_uuid = UUID(trip_id)
+        except ValueError:
+            logger.error(f"Invalid trip_id format: {trip_id}. Cannot save review.")
+            raise
+            
+        # Fetch trip to get destination
+        trip = db.query(Trip).filter_by(id=trip_uuid).first()
+        destination = trip.destination if trip else "Unknown"
+        
+        new_review = Review(
+            trip_id=trip_uuid,
+            user_id=user_uuid,
+            destination=destination,
+            rating=rating,
+            title=title,
+            content=content,
+            created_at=datetime.utcnow()
+        )
+        db.add(new_review)
+        db.commit()
+        db.refresh(new_review)
+        logger.info(f"Saved new review {new_review.id} for trip {trip_id} by user {user_id}.")
+        return new_review
 
     async def get_chat_history(
         self, user_id: str, session_id: Optional[str] = None
     ) -> List[Dict[str, Any]]:
         try:
-            # In a real application, you would retrieve history from a database
-            logger.info(
-                f"Retrieving chat history for user {user_id}, session {session_id}"
-            )
-            return []
+            with SessionLocal() as db:
+                # Retrieve chat session
+                chat_session = db.query(ChatSession).filter_by(id=UUID(session_id)).first() if session_id else None
+                if not chat_session:
+                    logger.info(f"No chat session found for session ID: {session_id}")
+                    return []
+                
+                # Retrieve messages for the session
+                messages = db.query(ChatMessage).filter_by(session_id=chat_session.id).order_by(ChatMessage.created_at).all()
+                history = [{
+                    "role": msg.role,
+                    "content": msg.content,
+                    "timestamp": msg.created_at.isoformat()
+                } for msg in messages]
+                logger.info(f"Retrieved {len(history)} messages for session {session_id}")
+                return history
         except Exception as e:
             logger.error(f"Error retrieving chat history for user {user_id}, session {session_id}: {e}")
             raise # Re-raise the exception to propagate it
@@ -668,14 +1271,30 @@ class AIChatManager:
         self, user_id: str, trip_id: Optional[str] = None
     ) -> str:
         try:
-            session_id = f"session_{user_id}_{datetime.utcnow().timestamp()}"
-            logger.info(
-                f"Created new chat session: {session_id} for user {user_id}"
+            from uuid import UUID
+            # Generate a new UUID for the session
+            session_id = str(UUID(user_id) if user_id and len(user_id) == 36 else UUID.uuid4()) # Use user_id as a base for session_id or generate new if user_id is not a valid UUID string.
+            
+            # Create an initial ChatContext
+            initial_context = ChatContext(
+                user_id=user_id,
+                trip_id=trip_id,
+                preferences=["culture", "food", "adventure"],
+                travelers_count=1,
+                current_location={"lat": 48.8584, "lon": 2.2945}, # Default to Eiffel Tower, Paris for testing
+                suggested_places=[],
+                conversation_history=[]
             )
+            
+            with SessionLocal() as db:
+                # Create and save the new ChatSession in the database
+                new_chat_session = await self._create_chat_session_in_db(db, user_id, session_id, initial_context)
+                
+            logger.info(f"Created and saved new chat session: {session_id} for user {user_id}")
             return session_id
         except Exception as e:
             logger.error(f"Error creating new session for user {user_id}: {e}")
-            raise # Re-raise the exception to propagate it
+            raise
 
 
 class ChatSessionManager:
@@ -683,42 +1302,29 @@ class ChatSessionManager:
 
     def __init__(self):
         self.ai_manager = AIChatManager()
+        # We will now load active sessions from the DB or create on demand
         self.active_sessions: Dict[str, ChatContext] = {}
 
     async def start_session(self, user_id: str, trip_id: Optional[str] = None) -> str:
         try:
+            # Create a new session in the AIChatManager which now handles DB persistence
             session_id = await self.ai_manager.create_new_session(user_id, trip_id)
-            # Initialize ChatContext with default or provided values, including new fields
-            context = ChatContext(
-                user_id=user_id,
-                trip_id=trip_id,
-                preferences=["culture", "food", "adventure"],
-                travelers_count=1,
-                current_location=None,  # Initially None, expects frontend to provide
-                suggested_places=[],  # Initialize as empty list
-                conversation_history=[],  # Initialize as empty list
-            )
+            # Fetch the context for the newly created session from the DB to populate active_sessions
+            context = await self.ai_manager._get_or_create_context(user_id, session_id) 
             self.active_sessions[session_id] = context
             logger.info(f"Session {session_id} started successfully for user {user_id}")
             return session_id
         except Exception as e:
             logger.error(f"Error in start_session for user {user_id}: {e}")
-            raise # Re-raise the exception to propagate it
+            raise
 
     async def send_message(self, user_id: str, message: str, session_id: Optional[str] = None) -> Dict[str, Any]:
         if session_id is None:
             session_id = await self.start_session(user_id)
         
-        context = self.active_sessions.get(session_id)
-        if context is None:
-            # If session context is not found, create a new one with default values
-            context = ChatContext(
-                user_id=user_id,
-                current_location=None, # Expects frontend to provide
-                suggested_places=[],
-                conversation_history=[] # Initialize as empty list
-            )
-            self.active_sessions[session_id] = context
+        # Always get the latest context from the AI manager (which fetches from DB)
+        context = await self.ai_manager._get_or_create_context(user_id, session_id) # Ensure context is always fresh
+        self.active_sessions[session_id] = context # Update in-memory cache
         
         response = await self.ai_manager.process_message(user_id, message, session_id, context)
         
@@ -728,10 +1334,24 @@ class ChatSessionManager:
         return response
 
     async def end_session(self, session_id: str):
-        if session_id in self.active_sessions:
-            del self.active_sessions[session_id]
+        try:
+            if session_id in self.active_sessions:
+                del self.active_sessions[session_id]
+            with SessionLocal() as db:
+                chat_session = db.query(ChatSession).filter_by(id=UUID(session_id)).first()
+                if chat_session:
+                    chat_session.is_active = False
+                    chat_session.updated_at = datetime.utcnow()
+                    db.commit()
+                    logger.info(f"Session {session_id} marked as inactive in DB.")
+        except Exception as e:
+            logger.error(f"Error ending session {session_id}: {e}")
+            raise
 
     def get_session_context(self, session_id: str) -> Optional[ChatContext]:
+        # This will now always hit the AI manager, which can fetch from DB
+        # For simplicity, we'll directly return from active_sessions, assuming it's kept up-to-date by send_message
+        # In a more complex app, this might also fetch from DB if not in active_sessions
         return self.active_sessions.get(session_id)
 
 chat_manager = None
@@ -778,22 +1398,35 @@ async def start_chat_session(user_id: str, trip_id: Optional[str] = None) -> str
 async def get_chat_history(user_id: str, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
     """Get chat history"""
     manager = get_chat_manager()
-    return await manager.get_chat_history(user_id, session_id)
+    # This now uses the AI manager's method which fetches from DB
+    return await manager.ai_manager.get_chat_history(user_id, session_id)
 
 if __name__ == "__main__":
     async def test_chat():
         print("🧠 Testing AI Chat System...")
         
+        # Ensure database is initialized before testing
+        init_db()
+        
         # Test basic message processing
-        response = await chat_endpoint("test_user", "I want to plan a trip to Paris")
+        test_user_id = "test_user_123"
+        response = await chat_endpoint(test_user_id, "I want to plan a trip to Paris")
         print(f"Response: {response}")
         
         # Test session management
-        session_id = await start_chat_session("test_user")
+        session_id = await start_chat_session(test_user_id)
         print(f"Session ID: {session_id}")
         
         # Test follow-up message
-        response2 = await chat_endpoint("test_user", "What should I do there?", session_id)
+        response2 = await chat_endpoint(test_user_id, "What should I do there?", session_id)
         print(f"Follow-up Response: {response2}")
+        
+        # Test getting chat history
+        history = await get_chat_history(test_user_id, session_id)
+        print(f"Chat History: {history}")
+        
+        # Test ending session
+        await get_chat_manager().end_session(session_id)
+        print(f"Session {session_id} ended.")
     
     asyncio.run(test_chat())
