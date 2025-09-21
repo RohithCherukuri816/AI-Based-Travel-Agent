@@ -20,7 +20,7 @@ import google.generativeai as genai
 # New LangGraph and core imports
 from langgraph.graph import StateGraph, END
 from langgraph.graph.message import add_messages
-from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, AIMessage, ToolMessage, SystemMessage
 from langchain_core.tools import tool as langchain_tool
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -117,24 +117,58 @@ class AIChatManager:
         else:
             logger.warning("Google AI is not enabled in the configuration.")
 
+    def _inject_location_into_tool_args(self, tool_name: str, tool_args: Dict[str, Any], current_location: Optional[Dict[str, float]]) -> Dict[str, Any]:
+        """Helper to inject current_location into tool arguments if not explicitly provided by the LLM."""
+        if not current_location:
+            return tool_args
+
+        modified_args = tool_args.copy()
+        location_str = f"{current_location['lat']},{current_location['lon']}"
+        default_city = "Paris" # Our default hardcoded city for Eiffel Tower coordinates
+
+        if tool_name in ["get_current_weather", "search_nearby_places", "search_local_events"]:
+            if "location" not in modified_args or not modified_args["location"]:
+                modified_args["location"] = location_str # Prioritize coordinates for direct use
+                if tool_name in ["get_current_weather", "search_local_events"] and "city_name" not in modified_args:
+                    modified_args["city_name"] = default_city # Provide a city name fallback/alternative
+        elif tool_name == "get_travel_directions":
+            if "origin" not in modified_args or modified_args["origin"].lower() in ["my current location", "here"]:
+                modified_args["origin"] = location_str
+        
+        return modified_args
+
     def _create_travel_tools(self) -> List[BaseTool]:
         """Create travel planning tools for the AI agent"""
         
         @langchain_tool
-        async def get_current_weather(location: str) -> str:
-            """Get current weather and forecast for a destination"""
-            weather_data = await self.api_manager.get_weather(location)
+        async def get_current_weather(location: Optional[str] = None, current_location: Optional[Dict[str, float]] = None) -> str:
+            """Get current weather and forecast for a destination. If no location is provided, it uses the user's current location from context."""
+            target_location = location
+            if not target_location and current_location:
+                target_location = f"{current_location['lat']},{current_location['lon']}"
+
+            if not target_location:
+                return "Please provide a location to get weather information."
+
+            weather_data = await self.api_manager.get_weather(target_location)
             if weather_data and weather_data.current:
-                return f"Current weather in {location}: {weather_data.current.get('description', 'Unknown')}, Temperature: {weather_data.current.get('temperature')}°C."
-            return f"Could not retrieve weather for {location}."
+                return f"Current weather in {target_location}: {weather_data.current.get('description', 'Unknown')}, Temperature: {weather_data.current.get('temperature')}°C."
+            return f"Could not retrieve weather for {target_location}."
 
         @langchain_tool
-        async def search_nearby_places(query: str, location: str, type: Optional[str] = None) -> str:
-            """Search for attractions, restaurants, and activities in a destination"""
-            places = await self.api_manager.search_places(query=query, location=location, type=type)
+        async def search_nearby_places(query: str, location: Optional[str] = None, type: Optional[str] = None, current_location: Optional[Dict[str, float]] = None) -> str:
+            """Search for attractions, restaurants, and activities in a destination. If no location is provided, it uses the user's current location from context."""
+            target_location = location
+            if not target_location and current_location:
+                target_location = f"{current_location['lat']},{current_location['lon']}"
+
+            if not target_location:
+                return "Please provide a location to search for places."
+
+            places = await self.api_manager.search_places(query=query, location=target_location, type=type)
             if places:
                 return json.dumps([p.__dict__ for p in places])
-            return f"No places found for {query} in {location}."
+            return f"No places found for {query} in {target_location}."
 
         @langchain_tool
         async def get_place_details(place_id: str) -> str:
@@ -151,20 +185,31 @@ class AIChatManager:
             return f"No cultural or historical context found for {title}."
 
         @langchain_tool
-        async def search_local_events(location: str, start_date: Optional[str] = None, end_date: Optional[str] = None, query: Optional[str] = None, categories: Optional[List[str]] = None) -> str:
-            """Search for local events using Eventbrite API."""
-            events = await self.api_manager.eventbrite_api.search_events(location, start_date, end_date, query, categories)
+        async def search_local_events(location: Optional[str] = None, start_date: Optional[str] = None, end_date: Optional[str] = None, query: Optional[str] = None, categories: Optional[List[str]] = None, current_location: Optional[Dict[str, float]] = None) -> str:
+            """Search for local events using Eventbrite API. If no location is provided, it uses the user's current location from context."""
+            target_location = location
+            if not target_location and current_location:
+                target_location = f"{current_location['lat']},{current_location['lon']}"
+
+            if not target_location:
+                return "Please provide a location to search for events."
+
+            events = await self.api_manager.eventbrite_api.search_events(target_location, start_date, end_date, query, categories)
             if events:
                 return json.dumps([e.__dict__ for e in events])
-            return f"No events found for {location}."
+            return f"No events found for {target_location}."
 
         @langchain_tool
-        async def get_travel_directions(origin: str, destination: str, mode: str = "walking") -> str:
-            """Get travel directions between two points (e.g., 'Eiffel Tower' to 'Louvre Museum') with specified travel mode (walking, driving, bicycling, transit)."""
-            route = await self.api_manager.places_api.get_directions(origin, destination, mode)
+        async def get_travel_directions(origin: str, destination: str, mode: str = "walking", current_location: Optional[Dict[str, float]] = None) -> str:
+            """Get travel directions between two points (e.g., 'Eiffel Tower' to 'Louvre Museum') with specified travel mode (walking, driving, bicycling, transit). If origin is 'my current location' or similar, it uses the user's current location from context."""
+            actual_origin = origin
+            if origin.lower() in ["my current location", "here"] and current_location:
+                actual_origin = f"{current_location['lat']},{current_location['lon']}"
+
+            route = await self.api_manager.places_api.get_directions(actual_origin, destination, mode)
             if route:
                 return json.dumps(route.__dict__)
-            return f"Could not find {mode} directions from {origin} to {destination}."
+            return f"Could not find {mode} directions from {actual_origin} to {destination}."
 
         @langchain_tool
         async def find_flights(origin: str, destination: str, departure_date: str, return_date: Optional[str] = None, adults: int = 1) -> str:
@@ -207,9 +252,19 @@ class AIChatManager:
         logger.info("ChatGoogleGenerativeAI client initialized for LangGraph.")
 
         system_prompt = """
-        You are a friendly, knowledgeable tourist guide. You recommend attractions, restaurants, and activities based on the user's location, preferences, and weather.
+        You are a friendly, knowledgeable tourist guide. Your primary goal is to recommend attractions, restaurants, and activities based on the user's current location, preferences, and weather.
+        **ALWAYS use the user's current location from the chat context for any location-based queries or tool calls.** Do not ask for the location if it is already provided in the context.
+        
+        **IMPORTANT: You MUST use the available tools to get information for the user's requests.**
+        - For questions about attractions or places of interest, use the `search_nearby_places` tool.
+        - For restaurant suggestions or food-related queries, use the `search_nearby_places` tool with `type="restaurant"`.
+        - For weather information, use the `get_current_weather` tool.
+        - For local events, use the `search_local_events` tool.
+        - For directions or routes, use the `get_travel_directions` tool.
+        - For cultural or historical context about a specific place, use the `get_cultural_historical_context` tool.
+
         Always include cultural insights, history, or fun facts.
-        When providing recommendations, present them in a structured JSON format with the following sections: Attractions, Food, Events, Weather Tip, Suggested Route.
+        When providing recommendations, present them in a structured JSON format with the following sections: Attractions, Food, Events, Weather Tip, Suggested Route. **Ensure these sections are populated with relevant information gathered from tool calls.**
         If you suggest a route, include estimated distance and duration. If cultural context is available, weave it into the attraction descriptions.
         Ensure all JSON output is valid and properly escaped.
         """
@@ -225,17 +280,51 @@ class AIChatManager:
         # New State for LangGraph
         class AgentState(Dict[str, Any]):
             messages: Annotated[List[BaseMessage], add_messages]
+            current_location: Optional[Dict[str, float]] = None # Add current_location to the agent state
             
         # tool_executor = ToolExecutor(self.tools) # Removed ToolExecutor
         tool_node = ToolNode(self.tools)
 
         def call_llm_node(state: AgentState):
             messages = state["messages"]
+            current_location = state.get("current_location")
+            
+            if current_location:
+                # Make the SystemMessage very explicit about using the location for tool calls
+                location_str = f"{current_location['lat']},{current_location['lon']}"
+                location_message = SystemMessage(content=f"""
+                The user's current precise current location is: {location_str}. 
+                **ALWAYS** use this precise location (e.g., "{location_str}") for any tool calls that require a 'location' or 'origin' argument and the user's query implies 'near me' or doesn't specify a different location.
+                
+                Remember to populate the JSON sections (Attractions, Food, Events, Weather Tip, Suggested Route) with actual content gathered from tool calls, not just leave them empty.
+                """)
+                messages = [location_message] + messages
+            
             response = llm_with_tools.invoke(messages)
             return {"messages": [response]}
 
         def call_tool_node(state: AgentState):
             # The ToolNode itself handles the execution based on the last message's tool_calls
+            # We need to ensure that tools that require location can access it from the state.
+            # This might require modifying ToolNode's behavior or passing it explicitly if tools are invoked manually.
+            last_message = state["messages"][-1]
+            current_location = state.get("current_location")
+            
+            if last_message.tool_calls:
+                modified_tool_calls = []
+                for tool_call in last_message.tool_calls:
+                    # Inject current_location into tool arguments
+                    modified_args = self._inject_location_into_tool_args(
+                        tool_call["name"],
+                        tool_call["args"],
+                        current_location
+                    )
+                    modified_tool_calls.append({"name": tool_call["name"], "args": modified_args, "id": tool_call["id"]}) # Include the 'id'
+                
+                # Create a new message with modified tool calls for the ToolNode
+                modified_message = AIMessage(content="", tool_calls=modified_tool_calls)
+                state["messages"] = state["messages"][:-1] + [modified_message] # Replace original message
+
             return tool_node.invoke(state)
 
         def should_continue(state: AgentState):
@@ -266,7 +355,7 @@ class AIChatManager:
 
             # Use LangGraph to invoke the agent
             if self.agent_graph:
-                inputs = {"messages": [user_message_obj]}
+                inputs = {"messages": [user_message_obj], "current_location": context.current_location}
                 result = await self.agent_graph.ainvoke(inputs, config={"recursion_limit": 50})
                 ai_response_obj = result["messages"][-1]
                 
@@ -276,7 +365,7 @@ class AIChatManager:
                 formatted_response = await self._format_ai_response(response_content, context)
                 
                 response = {
-                    "content": formatted_response, # Now contains structured JSON
+                    "content": json.dumps(formatted_response), # Serialize to JSON string for frontend
                     "type": "travel_planning",
                     "suggestions": await self._generate_travel_suggestions(context),
                     "next_steps": []
@@ -355,7 +444,7 @@ class AIChatManager:
             structured_output["Suggested Route"] = {"description": route_info}
 
         # If no specific sections were extracted, put the whole response into a general content field
-        if not any(structured_output.values()):
+        if not any(structured_output.values()) and "General Content" not in structured_output:
             structured_output["General Content"] = raw_response
 
         return structured_output
@@ -523,7 +612,7 @@ class AIChatManager:
         # In a real app, this would come from the frontend or a mobile API
         if current_location is None:
             current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
-        return ChatContext(user_id=user_id, trip_id=session_id, preferences=["culture", "food", "adventure"], travelers_count=2, current_location=current_location)
+        return ChatContext(user_id=user_id, trip_id=session_id, preferences=["culture", "food", "adventure"], travelers_count=2, current_location=current_location, suggested_places=[], conversation_history=[])
     
     async def _save_chat_session(
         self,

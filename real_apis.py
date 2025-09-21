@@ -219,6 +219,12 @@ class WeatherAPI(BaseAPI):
     
     def __init__(self):
         api_config = get_api_config()["openweather"]
+        if not api_config["enabled"] or not api_config["api_key"]:
+            logger.error("OpenWeather API is not enabled or API key is missing. Weather features will be unavailable.")
+            # You might want to raise an exception or set a flag here to disable the API functionality
+            self.api_key = None # Explicitly set to None if not enabled
+            self.base_url = ""
+            return
         super().__init__(api_config["api_key"], api_config["base_url"])
     
     async def get_weather(self, location: str, days: int = 7) -> WeatherData:
@@ -282,6 +288,41 @@ class WeatherAPI(BaseAPI):
     
     async def _get_coordinates(self, location: str) -> Dict[str, float]:
         """Get coordinates for a location"""
+        # Check if the input looks like coordinates (e.g., "lat,lon")
+        if "," in location:
+            try:
+                lat, lon = map(float, location.split(","))
+                # For OpenWeatherMap's direct geocoding, we need a city name.
+                # Perform reverse geocoding using Google Places API key to get a city name.
+                reverse_geocode_params = {
+                    "latlng": f"{lat},{lon}",
+                    "key": settings.GOOGLE_PLACES_API_KEY
+                }
+                async with httpx.AsyncClient() as client:
+                    geocode_response = await client.get("https://maps.googleapis.com/maps/api/geocode/json", params=reverse_geocode_params)
+                    geocode_response.raise_for_status()
+                    geocode_data = geocode_response.json()
+                    if geocode_data.get("results"):
+                        # Extract city name from formatted address or address components
+                        for component in geocode_data["results"][0]["address_components"]:
+                            if "locality" in component["types"]:
+                                location = component["long_name"]
+                                break
+                        if not location or "," in location: # Fallback if city not found or still coordinates
+                             location = geocode_data["results"][0]["formatted_address"]
+                    else:
+                        logger.warning(f"Reverse geocoding failed for {lat},{lon}. Falling back to coordinates directly.")
+                        return {"lat": lat, "lon": lon} # Use coords directly if city name cannot be resolved
+                
+            except (ValueError, httpx.RequestError) as e:
+                logger.error(f"Reverse geocoding error in WeatherAPI._get_coordinates: {e}")
+                # If reverse geocoding fails, still try to use the raw coordinates if they parse
+                try:
+                    lat, lon = map(float, location.split(","))
+                    return {"lat": lat, "lon": lon}
+                except ValueError:
+                    pass
+        
         params = {
             "q": location,
             "appid": self.api_key,
@@ -342,6 +383,11 @@ class PlacesAPI(BaseAPI):
     
     def __init__(self):
         api_config = get_api_config()["google_places"]
+        if not api_config["enabled"] or not api_config["api_key"]:
+            logger.error("Google Places API is not enabled or API key is missing. Place search features will be unavailable.")
+            self.api_key = None
+            self.base_url = ""
+            return
         super().__init__(api_config["api_key"], api_config["base_url"])
     
     async def search_places(
@@ -415,6 +461,14 @@ class PlacesAPI(BaseAPI):
     
     async def _get_coordinates(self, location: str) -> Dict[str, float]:
         """Get coordinates for a location using Geocoding API"""
+        # Check if the input looks like coordinates (e.g., "lat,lon")
+        if "," in location:
+            try:
+                lat, lng = map(float, location.split(","))
+                return {"lat": lat, "lng": lng}
+            except ValueError:
+                pass # Not coordinates, proceed to geocoding
+
         params = {
             "address": location,
             "key": self.api_key
@@ -779,7 +833,16 @@ class EventbriteAPI(BaseAPI):
 
     def __init__(self):
         api_config = get_api_config()["eventbrite"]
+        if not api_config["enabled"] or not api_config["api_key"]:
+            logger.error("Eventbrite API is not enabled or API key is missing. Event search features will be unavailable.")
+            self.api_key = None
+            self.base_url = ""
+            self.google_places_api_key = None # Also set this to None if Eventbrite is not enabled
+            return
         super().__init__(api_config["api_key"], api_config["base_url"])
+        # Store the Google Places API key for reverse geocoding within this class
+        google_places_config = get_api_config()["google_places"]
+        self.google_places_api_key = google_places_config["api_key"]
 
     async def search_events(
         self,
@@ -792,8 +855,31 @@ class EventbriteAPI(BaseAPI):
     ) -> List[EventData]:
         """Search for events using Eventbrite API"""
         try:
+            effective_location = location
+            # If location is in "lat,lon" format, try to reverse geocode to a human-readable address
+            if "," in location:
+                try:
+                    lat, lon = map(float, location.split(","))
+                    # Use Google Places API for reverse geocoding
+                    reverse_geocode_params = {
+                        "latlng": f"{lat},{lon}",
+                        "key": self.google_places_api_key # Assuming GOOGLE_PLACES_API_KEY is available in settings
+                    }
+                    async with httpx.AsyncClient() as client:
+                        geocode_response = await client.get("https://maps.googleapis.com/maps/api/geocode/json", params=reverse_geocode_params)
+                        geocode_response.raise_for_status()
+                        geocode_data = geocode_response.json()
+                        if geocode_data.get("results"):
+                            effective_location = geocode_data["results"][0]["formatted_address"]
+                        else:
+                            logger.warning(f"Reverse geocoding failed for {location}")
+                            return [] # Cannot proceed without a valid address
+                except (ValueError, httpx.RequestError) as e:
+                    logger.error(f"Reverse geocoding error: {e}")
+                    return []
+
             params = {
-                "location.address": location,
+                "location.address": effective_location,
                 "location.within": radius,
                 "token": self.api_key,
             }
