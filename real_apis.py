@@ -24,6 +24,8 @@ class APIProvider(str, Enum):
     """Available API providers"""
     OPENWEATHER = "openweather"
     GOOGLE_PLACES = "google_places"
+    WIKIPEDIA = "wikipedia"
+    EVENTBRITE = "eventbrite"
     AMADEUS = "amadeus"
     BOOKING = "booking"
     SKYSCANNER = "skyscanner"
@@ -38,6 +40,41 @@ class WeatherData:
     forecast: List[Dict[str, Any]]
     alerts: List[Dict[str, Any]]
     last_updated: datetime
+
+
+@dataclass
+class EventData:
+    """Event information structure"""
+    id: str
+    name: str
+    start_time: datetime
+    end_time: datetime
+    url: str
+    venue: Dict[str, Any]
+    description: Optional[str]
+    category: Optional[str]
+    price: Optional[float]
+    is_free: bool
+
+
+@dataclass
+class WikipediaArticle:
+    """Wikipedia article information structure"""
+    title: str
+    summary: str
+    full_url: str
+    image_url: Optional[str]
+
+
+@dataclass
+class RouteData:
+    """Route information structure"""
+    origin: Dict[str, float]
+    destination: Dict[str, float]
+    distance: str
+    duration: str
+    steps: List[str]
+    travel_mode: str
 
 
 @dataclass
@@ -413,6 +450,45 @@ class PlacesAPI(BaseAPI):
             logger.error(f"Place details error: {e}")
             return None
 
+    async def get_directions(
+        self,
+        origin: Union[str, Dict[str, float]],
+        destination: Union[str, Dict[str, float]],
+        mode: str = "walking",
+        units: str = "metric",
+    ) -> Optional[RouteData]:
+        """Get directions between two points using Google Directions API"""
+        try:
+            params = {
+                "origin": origin if isinstance(origin, str) else f"{origin['lat']},{origin['lng']}",
+                "destination": destination if isinstance(destination, str) else f"{destination['lat']},{destination['lng']}",
+                "mode": mode,
+                "units": units,
+                "key": self.api_key,
+            }
+            response = await self._make_request("GET", "https://maps.googleapis.com/maps/api/directions/json", params)
+
+            if "error" in response or response.get("status") != "OK" or not response.get("routes"):
+                logger.error(f"Google Directions API error: {response.get('error_message', 'Unknown error')}")
+                return None
+
+            route = response["routes"][0]
+            leg = route["legs"][0]
+
+            steps = [step["html_instructions"] for step in leg["steps"]]
+
+            return RouteData(
+                origin=leg["start_location"],
+                destination=leg["end_location"],
+                distance=leg["distance"]["text"],
+                duration=leg["duration"]["text"],
+                steps=steps,
+                travel_mode=mode,
+            )
+        except Exception as e:
+            logger.error(f"Google Directions API error: {e}")
+            return None
+
 
 class FlightAPI(BaseAPI):
     """Flight search API integration (Amadeus)"""
@@ -650,6 +726,117 @@ class HotelAPI(BaseAPI):
             return None
 
 
+class WikipediaAPI(BaseAPI):
+    """Wikipedia API integration"""
+
+    def __init__(self):
+        api_config = get_api_config()["wikipedia"]
+        super().__init__("", api_config["base_url"])  # No API key needed for Wikipedia
+
+    async def get_summary(self, title: str, sentences: int = 3) -> Optional[WikipediaArticle]:
+        """Get a summary of a Wikipedia article"""
+        try:
+            params = {
+                "action": "query",
+                "format": "json",
+                "prop": "extracts|pageimages|info",
+                "exintro": True,
+                "explaintext": True,
+                "inprop": "url",
+                "pithumbsize": 200,
+                "redirects": 1,
+                "titles": title,
+                "exsentences": sentences,
+            }
+            # Use the requests library directly for Wikipedia as it's simpler and doesn't require aiohttp for basic calls
+            async with httpx.AsyncClient() as client:
+                response = await client.get("https://en.wikipedia.org/w/api.php", params=params)
+                response.raise_for_status()
+                data = response.json()
+
+            page = next(iter(data["query"]["pages"].values()), None)
+
+            if not page or "missing" in page:
+                return None
+
+            image_url = None
+            if "thumbnail" in page:
+                image_url = page["thumbnail"]["source"]
+
+            return WikipediaArticle(
+                title=page["title"],
+                summary=page["extract"],
+                full_url=page["fullurl"],
+                image_url=image_url,
+            )
+        except Exception as e:
+            logger.error(f"Wikipedia API error: {e}")
+            return None
+
+
+class EventbriteAPI(BaseAPI):
+    """Eventbrite API integration"""
+
+    def __init__(self):
+        api_config = get_api_config()["eventbrite"]
+        super().__init__(api_config["api_key"], api_config["base_url"])
+
+    async def search_events(
+        self,
+        location: str,
+        start_date: Optional[str] = None,
+        end_date: Optional[str] = None,
+        query: Optional[str] = None,
+        categories: Optional[List[str]] = None,
+        radius: str = "50km",
+    ) -> List[EventData]:
+        """Search for events using Eventbrite API"""
+        try:
+            params = {
+                "location.address": location,
+                "location.within": radius,
+                "token": self.api_key,
+            }
+            if start_date:
+                params["start_date.range_start"] = start_date + "T00:00:00Z"
+            if end_date:
+                params["start_date.range_end"] = end_date + "T23:59:59Z"
+            if query:
+                params["q"] = query
+            if categories:
+                params["categories"] = ",".join(categories)
+
+            response = await self._make_request("GET", "/events/search/", params)
+
+            if "error" in response or "events" not in response:
+                logger.error(f"Eventbrite API error: {response.get('error_description', 'Unknown error')}")
+                return []
+
+            events = []
+            for event_data in response["events"]:
+                start_time = datetime.fromisoformat(event_data["start"]["utc"]) if event_data["start"] and event_data["start"]["utc"] else None
+                end_time = datetime.fromisoformat(event_data["end"]["utc"]) if event_data["end"] and event_data["end"]["utc"] else None
+
+                events.append(
+                    EventData(
+                        id=event_data["id"],
+                        name=event_data["name"]["text"],
+                        start_time=start_time,
+                        end_time=end_time,
+                        url=event_data["url"],
+                        venue=event_data.get("venue", {}),
+                        description=event_data["description"]["text"] if event_data.get("description") else None,
+                        category=event_data.get("category_id"),
+                        price=event_data.get("ticket_classes", [{}])[0].get("cost", {}).get("value", 0) / 100 if event_data.get("ticket_classes") else 0,
+                        is_free=event_data.get("is_free", False),
+                    )
+                )
+            return events
+        except Exception as e:
+            logger.error(f"Eventbrite API error: {e}")
+            return []
+
+
 class ActivityAPI(BaseAPI):
     """Activity and experience booking API integration"""
     
@@ -699,6 +886,8 @@ class APIManager:
         self.hotel_api = HotelAPI()
         self.activity_api = ActivityAPI()
         self.transport_api = TransportAPI()
+        self.wikipedia_api = WikipediaAPI()
+        self.eventbrite_api = EventbriteAPI()
         
         # Simple in-memory cache (in production, use Redis)
         self.cache = {}
@@ -802,6 +991,33 @@ async def search_places(
 ) -> List[PlaceData]:
     """Search for places"""
     return await api_manager.search_places(query, location, radius, type)
+
+
+async def get_wikipedia_summary(title: str, sentences: int = 3) -> Optional[WikipediaArticle]:
+    """Get a summary of a Wikipedia article"""
+    return await api_manager.wikipedia_api.get_summary(title, sentences)
+
+
+async def search_events(
+    location: str,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    query: Optional[str] = None,
+    categories: Optional[List[str]] = None,
+    radius: str = "50km",
+) -> List[EventData]:
+    """Search for events"""
+    return await api_manager.eventbrite_api.search_events(location, start_date, end_date, query, categories, radius)
+
+
+async def get_directions(
+    origin: Union[str, Dict[str, float]],
+    destination: Union[str, Dict[str, float]],
+    mode: str = "walking",
+    units: str = "metric",
+) -> Optional[RouteData]:
+    """Get directions between two points"""
+    return await api_manager.places_api.get_directions(origin, destination, mode, units)
 
 
 async def search_flights(

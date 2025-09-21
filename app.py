@@ -371,13 +371,14 @@ def create_travel_workflow():
     try:
         workflow = StateGraph(TravelState)
         
-        workflow.add_node("user_agent", analyze_user_preferences)
-        workflow.add_node("flight_agent", find_flight_options)
-        workflow.add_node("hotel_agent", find_hotel_options)
-        workflow.add_node("activity_agent", find_activities)
-        workflow.add_node("weather_agent", get_weather_info)
-        workflow.add_node("budget_agent", analyze_budget)
-        workflow.add_node("planner_agent", create_itinerary)
+        # Define agent nodes (these are essentially functions that operate on the state)
+        workflow.add_node("user_agent", call_analyze_user_preferences)
+        workflow.add_node("flight_agent", call_find_flight_options)
+        workflow.add_node("hotel_agent", call_find_hotel_options)
+        workflow.add_node("activity_agent", call_find_activities)
+        workflow.add_node("weather_agent", call_get_weather_info)
+        workflow.add_node("budget_agent", call_analyze_budget)
+        workflow.add_node("planner_agent", call_create_itinerary)
         
         workflow.set_entry_point("user_agent")
         workflow.add_edge("user_agent", "flight_agent")
@@ -392,6 +393,96 @@ def create_travel_workflow():
     except Exception as e:
         print(f"Warning: Failed to create LangGraph workflow: {e}")
         return None
+
+# Agent Executor Functions (Wrappers for the @tool functions to interact with TravelState)
+def call_analyze_user_preferences(state: TravelState) -> TravelState:
+    user_input = state.user_input
+    result = analyze_user_preferences(
+        destination=user_input["destination"],
+        preferences=user_input["preferences"],
+        budget=user_input["budget"],
+        duration=user_input["duration"]
+    )
+    state.user_profile = result
+    return state
+
+def call_find_flight_options(state: TravelState) -> TravelState:
+    user_input = state.user_input
+    result = find_flight_options(
+        destination=user_input["destination"],
+        start_date=user_input["start_date"],
+        budget=user_input["budget"],
+        travelers=user_input["travelers"]
+    )
+    state.flight_options = result
+    return state
+
+def call_find_hotel_options(state: TravelState) -> TravelState:
+    user_input = state.user_input
+    result = find_hotel_options(
+        destination=user_input["destination"],
+        duration=user_input["duration"],
+        budget=user_input["budget"],
+        travelers=user_input["travelers"],
+        travel_style=state.user_profile.get("travel_style", "balanced")
+    )
+    state.hotel_options = result
+    return state
+
+def call_find_activities(state: TravelState) -> TravelState:
+    user_input = state.user_input
+    result = find_activities(
+        destination=user_input["destination"],
+        duration=user_input["duration"],
+        preferences=user_input["preferences"],
+        budget=user_input["budget"]
+    )
+    state.activity_options = result
+    return state
+
+def call_get_weather_info(state: TravelState) -> TravelState:
+    user_input = state.user_input
+    result = get_weather_info(
+        destination=user_input["destination"],
+        start_date=user_input["start_date"],
+        duration=user_input["duration"]
+    )
+    state.weather_info = result
+    state.safety_alerts = result.get("safety_alerts", [])
+    return state
+
+def call_analyze_budget(state: TravelState) -> TravelState:
+    # Calculate costs from selected options or first available
+    flight_cost = state.flight_options[0]["price"] * state.user_input["travelers"] if state.flight_options else 0
+    hotel_cost = state.hotel_options[0]["price"] * state.user_input["duration"] * state.user_input["travelers"] if state.hotel_options else 0
+    activity_cost = sum(activity["price"] for activity in state.activity_options) if state.activity_options else 0
+
+    result = analyze_budget(
+        flight_cost=flight_cost,
+        hotel_cost=hotel_cost,
+        activity_cost=activity_cost,
+        total_budget=state.user_input["budget"],
+        travelers=state.user_input["travelers"]
+    )
+    state.budget_analysis = result
+    return state
+
+def call_create_itinerary(state: TravelState) -> TravelState:
+    result = create_itinerary(
+        activities=state.activity_options,
+        duration=state.user_input["duration"],
+        weather_info=state.weather_info,
+        safety_alerts=state.safety_alerts,
+        start_date=state.user_input["start_date"]
+    )
+    state.final_itinerary = result
+    # Add recommendations from budget analysis to overall recommendations
+    state.recommendations.extend(state.budget_analysis.get("recommendations", []))
+    # Add weather-based recommendations
+    for day_itinerary in result:
+        if day_itinerary.get("travel_tips"):
+            state.recommendations.extend(day_itinerary["travel_tips"])
+    return state
 
 travel_workflow = create_travel_workflow()
 

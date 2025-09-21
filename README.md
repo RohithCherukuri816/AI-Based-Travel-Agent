@@ -1,30 +1,32 @@
-# 🚀 AI Travel Planning Agent - NEXT LEVEL
+# 🌍 AI-powered Tourist Guide - LOCAL EDITION
 
-> **Revolutionary AI-powered travel planning platform with enterprise-grade features**
+> **Your personal local guide, powered by cutting-edge AI for immersive travel experiences**
 
 [![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.0.20-purple.svg)](https://langchain.com/langgraph)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-## 🌟 **What's New in 2.0**
+## 🌟 **Key Features of Your AI-powered Tourist Guide**
 
-This is **NOT** just another travel app. This is a **NEXT-LEVEL AI TRAVEL PLATFORM** that transforms how people plan, book, and experience travel.
+This is **NOT** just another travel app. This is your **ULTIMATE LOCAL COMPANION** that transforms how you explore and experience new places.
 
-### ✨ **Revolutionary Features**
+### ✨ **Intelligent Guidance**
 
-- **🧠 Multi-Agent AI System** - 8 specialized AI agents working in harmony
-- **💬 Natural Language Chat** - Plan trips through conversation
-- **📊 Advanced Analytics Dashboard** - Business intelligence & insights
-- **💳 Integrated Payment Processing** - Stripe & PayPal integration
-- **🌐 Real API Integrations** - Live data from travel services
-- **📱 Progressive Web App** - Mobile-first, responsive design
-- **🔒 Enterprise Security** - Production-ready security features
-- **📈 Business Intelligence** - Comprehensive analytics & reporting
+- **🌍 Local Guide AI** - Acts as a knowledgeable local guide for your current location.
+- **📍 GPS-powered Recommendations** - Fetches real-time attractions, restaurants, and hidden gems nearby.
+- **🗣️ Cultural & Historical Insights** - Provides rich context for places via Wikipedia integration.
+- **🗓️ Dynamic Itinerary Suggestions** - Offers short itineraries (2-3 hours, half-day) tailored to your interests.
+- **🌦️ Weather-Adjusted Tips** - Adapts recommendations based on live OpenWeatherMap data.
+- **🗺️ Smart Navigation** - Offers walking routes and navigation tips via Google Maps.
+- **🚫 Duplicate Prevention** - Tracks visited places to offer fresh suggestions.
+- **💬 Natural Language Chat** - Interact seamlessly to get personalized advice.
+- **🌐 Real API Integrations** - Live data from Google Maps, OpenWeatherMap, Wikipedia, and Eventbrite.
+- **💡 Structured JSON Output** - Delivers organized recommendations for easy frontend consumption.
 
 ---
 
-## 🎯 **Why This is Your Next Startup**
+## 🎯 **Why This is Your Next Adventure Companion**
 
 ### **Market Opportunity**
 - **$1.7T** global travel market
@@ -165,8 +167,10 @@ workflow.add_node("planner_agent", create_itinerary)
 ```
 
 ### **Real API Integrations**
-- **OpenWeather API** - Live weather data
-- **Google Places API** - Location services
+- **OpenWeather API** - Live weather data & forecasts
+- **Google Maps Platform** - Places API (attractions, restaurants, hidden gems) & Directions API (walking routes)
+- **Wikipedia API** - Cultural & historical context for landmarks
+- **Eventbrite API** - Local events & activities
 - **Amadeus API** - Flight search
 - **Booking.com API** - Hotel search
 - **Stripe API** - Payment processing
@@ -368,7 +372,9 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **FastAPI** for high-performance web framework
 - **Stripe** for payment processing
 - **OpenWeather** for weather data
-- **Google** for Places API
+- **Google** for Places API and Directions API
+- **Wikipedia** for cultural and historical context
+- **Eventbrite** for local events and activities
 
 ---
 

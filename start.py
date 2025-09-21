@@ -50,11 +50,20 @@ def check_dependencies():
         return False
     
     try:
+        # Check if a key package is already installed
+        # This is a lightweight check to avoid running pip install every time
+        import fastapi
+        print("✅ Dependencies already installed. Skipping installation.")
+        return True
+    except ImportError:
+        print("⚠️  Dependencies not found. Installing now...")
+
+    try:
         # Install dependencies
         print("📥 Installing Python dependencies...")
         subprocess.run([
             sys.executable, "-m", "pip", "install", "-r", requirements_file
-        ], check=True, capture_output=True)
+        ], check=True, text=True)
         print("✅ Dependencies installed successfully")
         return True
     except subprocess.CalledProcessError as e:
