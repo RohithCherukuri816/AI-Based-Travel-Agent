@@ -525,31 +525,68 @@ class AIChatManager:
             current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
         return ChatContext(user_id=user_id, trip_id=session_id, preferences=["culture", "food", "adventure"], travelers_count=2, current_location=current_location)
     
-    async def _save_chat_session(self, user_id: str, session_id: Optional[str], context: ChatContext, user_message: HumanMessage, ai_response: AIMessage):
-        # In a real application, you would save this to a database
-        # For now, we'll just log it.
-        logger.info(f"Saving chat session for user {user_id}, session {session_id}")
-        chat_message = ChatMessage(
-            session_id=session_id,
-            user_id=user_id,
-            message=user_message.content,
-            response=ai_response.content,
-            timestamp=datetime.utcnow(),
-            context_data=context.__dict__
-        )
-        # This would typically be saved to a database, e.g., using an ORM
-        # print(f"Saved chat message: {chat_message}")
-        pass
-    
-    async def get_chat_history(self, user_id: str, session_id: Optional[str] = None) -> List[Dict[str, Any]]:
-        # In a real application, you would retrieve history from a database
-        logger.info(f"Retrieving chat history for user {user_id}, session {session_id}")
-        return []
-    
-    async def create_new_session(self, user_id: str, trip_id: Optional[str] = None) -> str:
-        session_id = f"session_{user_id}_{datetime.utcnow().timestamp()}"
-        logger.info(f"Created new chat session: {session_id} for user {user_id}")
-        return session_id
+    async def _save_chat_session(
+        self,
+        user_id: str,
+        session_id: Optional[str],
+        context: ChatContext,
+        user_message: HumanMessage,
+        ai_response: AIMessage,
+    ):
+        try:
+            # In a real application, you would save this to a database
+            # For now, we'll just log it.
+            logger.info(f"Saving chat session for user {user_id}, session {session_id}")
+
+            # Save user message
+            user_chat_message = ChatMessage(
+                session_id=session_id,
+                role="user",
+                content=user_message.content,
+                trip_metadata=context.__dict__,  # Store context as metadata for user message
+            )
+
+            # Save AI response
+            ai_chat_message = ChatMessage(
+                session_id=session_id,
+                role="assistant",
+                content=ai_response.content,
+                trip_metadata=context.__dict__,  # Store context as metadata for AI response
+            )
+
+            # This would typically be saved to a database, e.g., using an ORM
+            # print(f"Saved user message: {user_chat_message}")
+            # print(f"Saved AI response: {ai_chat_message}")
+            pass
+        except Exception as e:
+            logger.error(f"Error saving chat session for user {user_id}, session {session_id}: {e}")
+            raise # Re-raise the exception to propagate it
+
+    async def get_chat_history(
+        self, user_id: str, session_id: Optional[str] = None
+    ) -> List[Dict[str, Any]]:
+        try:
+            # In a real application, you would retrieve history from a database
+            logger.info(
+                f"Retrieving chat history for user {user_id}, session {session_id}"
+            )
+            return []
+        except Exception as e:
+            logger.error(f"Error retrieving chat history for user {user_id}, session {session_id}: {e}")
+            raise # Re-raise the exception to propagate it
+
+    async def create_new_session(
+        self, user_id: str, trip_id: Optional[str] = None
+    ) -> str:
+        try:
+            session_id = f"session_{user_id}_{datetime.utcnow().timestamp()}"
+            logger.info(
+                f"Created new chat session: {session_id} for user {user_id}"
+            )
+            return session_id
+        except Exception as e:
+            logger.error(f"Error creating new session for user {user_id}: {e}")
+            raise # Re-raise the exception to propagate it
 
 
 class ChatSessionManager:
@@ -560,19 +597,24 @@ class ChatSessionManager:
         self.active_sessions: Dict[str, ChatContext] = {}
 
     async def start_session(self, user_id: str, trip_id: Optional[str] = None) -> str:
-        session_id = await self.ai_manager.create_new_session(user_id, trip_id)
-        # Initialize ChatContext with default or provided values, including new fields
-        context = ChatContext(
-            user_id=user_id,
-            trip_id=trip_id,
-            preferences=["culture", "food", "adventure"],
-            travelers_count=1,
-            current_location=None, # Initially None, expects frontend to provide
-            suggested_places=[], # Initialize as empty list
-            conversation_history=[] # Initialize as empty list
-        )
-        self.active_sessions[session_id] = context
-        return session_id
+        try:
+            session_id = await self.ai_manager.create_new_session(user_id, trip_id)
+            # Initialize ChatContext with default or provided values, including new fields
+            context = ChatContext(
+                user_id=user_id,
+                trip_id=trip_id,
+                preferences=["culture", "food", "adventure"],
+                travelers_count=1,
+                current_location=None,  # Initially None, expects frontend to provide
+                suggested_places=[],  # Initialize as empty list
+                conversation_history=[],  # Initialize as empty list
+            )
+            self.active_sessions[session_id] = context
+            logger.info(f"Session {session_id} started successfully for user {user_id}")
+            return session_id
+        except Exception as e:
+            logger.error(f"Error in start_session for user {user_id}: {e}")
+            raise # Re-raise the exception to propagate it
 
     async def send_message(self, user_id: str, message: str, session_id: Optional[str] = None) -> Dict[str, Any]:
         if session_id is None:
