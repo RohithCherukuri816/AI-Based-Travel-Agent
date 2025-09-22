@@ -53,11 +53,12 @@ class AIModel(str, Enum):
 
 class ChatContext(BaseModel):
     """Chat context and user preferences"""
+    session_id: Optional[str] = None # Added session_id
     user_id: str
     trip_id: Optional[str] = None
     current_destination: Optional[str] = None
     travel_style: Optional[str] = None
-    budget_range: Optional[Tuple[float, float]] = None
+    budget_tier: Optional[str] = None # Changed from budget_range to budget_tier (string)
     preferences: List[str] = [] # Initialize as empty list
     travelers_count: int = 1
     trip_duration: Optional[int] = None
@@ -67,12 +68,12 @@ class ChatContext(BaseModel):
     conversation_history: List[Dict[str, Any]] = [] # To store the conversation history
     
     # New fields for detailed requirement gathering
-    destination_type: Optional[str] = None # beach, mountains, cultural, adventure, etc.
-    purpose: Optional[str] = None # honeymoon, family, business, leisure
+    destination_type: List[str] = [] # Changed to List[str]
+    purpose: List[str] = [] # Changed to List[str]
     start_date: Optional[str] = None
     end_date: Optional[str] = None
-    accommodation_type: Optional[str] = None # hotel, resort, hostel, Airbnb
-    transport_mode: Optional[str] = None # flight, train, car, bus
+    accommodation_type: List[str] = [] # Changed to List[str]
+    transport_mode: List[str] = [] # Changed to List[str]
     special_needs: List[str] = [] # dietary restrictions, accessibility needs
 
     def __post_init__(self):
@@ -117,6 +118,9 @@ class AIChatManager:
         self.tools = self._create_travel_tools()
         self.agent_graph = self._create_langgraph_agent()
         init_db() # Initialize the database when AIChatManager is instantiated
+        # Tools are initialized in __init__ and are available via self.tools
+        # However, for direct invocation, we need a helper method
+        self.tools_by_name = {tool.name: tool for tool in self.tools}
 
     def _init_ai_clients(self):
         """Initialize AI service clients based on config"""
@@ -243,18 +247,19 @@ class AIChatManager:
             return "Hotel search functionality is available. Please provide destination, dates, and preferences."
 
         @langchain_tool
-        async def calculate_budget(destination: str, num_travelers: int, duration: int, accommodation_type: str = "standard", transport_mode: str = "flight", budget_tier: str = "standard") -> str:
-            """Calculate estimated costs for different travel components (transport, accommodation, meals, activities, insurance, taxes).
-            Offers 3 tiers: Budget, Standard, Luxury. Returns a detailed cost breakdown.
+        async def calculate_budget(user_id: str, destination: str, num_travelers: int, duration: int, budget_tier: str, accommodation_type: str, transport_mode: str) -> str:
+            """Calculate an estimated budget for a trip based on destination, number of travelers, duration (in days), budget tier (Budget, Standard, Luxury), accommodation type, and transport mode.
+            The calculation is simulated as per requirements.
             """
-            # This is a placeholder for actual budget calculation logic.
-            # In a real scenario, this would involve:
-            # 1. Fetching real-time pricing data for flights, hotels, activities based on destination, dates, etc.
-            # 2. Applying multipliers/logic for different budget tiers.
-            
+            # Ensure budget_tier is one of the allowed values, default to "Standard" if not valid
+            valid_budget_tiers = ["Budget", "Standard", "Luxury"]
+            if budget_tier not in valid_budget_tiers:
+                logger.warning(f"Invalid budget_tier provided: {budget_tier}. Defaulting to 'Standard'.")
+                budget_tier = "Standard"
+
             base_costs = {
-                "flight": 300,  # Per person, per direction
-                "accommodation_per_night": 100, # Per person
+                "flight": 300, # Per person, one-way base
+                "accommodation_per_night": 80, # Per person
                 "meals_per_day": 50, # Per person
                 "activities_per_day": 70, # Per person
                 "insurance": 30, # Per person
@@ -342,11 +347,7 @@ class AIChatManager:
             """Create a day-by-day itinerary based on preferences and constraints, including sightseeing, activities, and rest periods. 
             Suggest backup options for weather-sensitive activities. Provide both a JSON and human-readable version.
             """
-            # This is a placeholder for the actual itinerary generation logic.
-            # In a real scenario, this would involve complex logic:
-            # 1. Calling various APIs (weather, places, events) for data.
-            # 2. Using an LLM to creatively generate activities based on preferences.
-            # 3. Structuring the output day-by-day.
+            # The itinerary generation logic is simulated as per requirements.
             
             itinerary_draft = {
                 "destination": destination,
@@ -435,16 +436,43 @@ class AIChatManager:
 
         return [get_current_weather, search_nearby_places, get_cultural_historical_context, search_local_events, get_travel_directions, find_flights, find_hotels, calculate_budget, plan_itinerary, simulate_booking, submit_feedback]
 
+    async def run_tool(self, tool_name: str, tool_args: Dict[str, Any], context: ChatContext) -> Any:
+        """
+        Helper to run a tool by its name and arguments, injecting context if needed.
+        This mimics how the ToolNode would execute a tool.
+        """
+        tool = self.tools_by_name.get(tool_name)
+        if not tool:
+            raise ValueError(f"Tool {tool_name} not found.")
 
-    def _create_langgraph_agent(self):
-        """Initialize the LangGraph agent"""
-        if not LANGCHAIN_AVAILABLE:
-            return None
-
-        llm = ChatGoogleGenerativeAI(
-            model=self.ai_config["google"]["model"],
-            google_api_key=self.ai_config["google"]["api_key"]
+        # Inject current_location, user_id, and trip_id into tool arguments if missing
+        modified_args = self._inject_location_into_tool_args(
+            tool_name,
+            tool_args,
+            context.current_location
         )
+        if "user_id" not in modified_args and context.user_id:
+            modified_args["user_id"] = context.user_id
+        if "trip_id" not in modified_args and context.trip_id:
+            modified_args["trip_id"] = context.trip_id
+
+        # Handle special case for 'budget_tier' in calculate_budget tool
+        if tool_name == "calculate_budget" and "budget_tier" in modified_args:
+            # Ensure budget_tier is one of the allowed values
+            allowed_tiers = ["Budget", "Standard", "Luxury"]
+            if modified_args["budget_tier"] not in allowed_tiers:
+                logger.warning(f"Invalid budget_tier '{modified_args['budget_tier']}'. Defaulting to 'Standard'.")
+                modified_args["budget_tier"] = "Standard"
+
+        logger.info(f"Invoking tool: {tool_name} with args: {modified_args}")
+        result = await tool.ainvoke(modified_args)
+        logger.info(f"Tool {tool_name} returned: {result}")
+        return result
+
+    def _create_langgraph_agent(self) -> StateGraph:
+        """Create a LangGraph agent with tools."""
+        # Define the LLM (Large Language Model) to be used.
+        llm = ChatGoogleGenerativeAI(model="gemini-1.5-flash", temperature=0.7)
         logger.info("ChatGoogleGenerativeAI client initialized for LangGraph.")
 
         system_prompt = """
@@ -454,8 +482,8 @@ class AIChatManager:
         
         1.  **Requirement Gathering (User Preferences):**
             - Start by greeting the user warmly and introducing yourself as their AI travel agent. 
-            - **Crucially, if the user provides a comprehensive set of travel preferences in a single message (e.g., from a form submission), immediately proceed to generate a draft itinerary and cost breakdown using your tools.** Do NOT ask for individual details if they are already provided.
-            - If information is missing, then ask structured questions one by one to gather detailed user preferences for their trip. This includes:
+            - **CRITICAL & HIGH PRIORITY:** If the user provides a comprehensive set of travel preferences in a single message (e.g., from a form submission, which will contain `destination`, `start_date`, `end_date`, `num_travelers`, and `budget` related info), you **MUST IMMEDIATELY AND WITHOUT CONVERSATIONAL INTERVENTION proceed to generate a draft itinerary AND a cost breakdown by calling your tools (`plan_itinerary` and `calculate_budget`).** Your response in this scenario **MUST ONLY CONSIST OF TOOL CALLS.** Do NOT ask for individual details if they are already provided. Do not generate conversational responses if you can call a tool.
+            - If information for `plan_itinerary` (destination, start_date, end_date, preferences (derived from destination_type, purpose, accommodation_type, transport_mode), num_travelers) or `calculate_budget` (destination, num_travelers, duration (derived from dates), budget_tier, accommodation_type, transport_mode) is missing, then ask structured questions one by one to gather the *missing* detailed user preferences for their trip. This includes:
                 - **Destination (City/Country):** Where do they want to go?
                 - **Destination Type:** (e.g., beach, mountains, cultural, adventure, relaxation)
                 - **Purpose of Trip:** (e.g., honeymoon, family vacation, business, leisure, solo adventure)
@@ -469,16 +497,22 @@ class AIChatManager:
             - Prioritize gathering all essential information before moving to the next stage.
             - Dynamically update the ChatContext with gathered information.
             
-        2.  **Research & Options (using Tools):**
-            - Once you have all initial requirements, proactively use your tools to research and present options.
-            - **After receiving comprehensive preferences, immediately call `plan_itinerary` and `calculate_budget` tools with the collected details.**
-            - Use `get_current_weather` for weather conditions.
-            - Use `search_nearby_places` for attractions, restaurants, and activities.
-            - Use `get_cultural_historical_context` for background information.
-            - Use `search_local_events` for events in the destination.
-            - Use `get_travel_directions` for route planning.
-            - Use `find_flights` and `find_hotels` to explore travel and accommodation options.
-            - Present a few diverse options to the user and ask for their preferences.
+        2.  **Tool Usage and Direct Output (Tool Calls ONLY when Planning):**
+            - Once you have enough information to call `plan_itinerary` (requires `destination`, `start_date`, `end_date`, `preferences` (a list of keywords based on destination_type, purpose, accommodation_type, transport_mode), `num_travelers`) AND `calculate_budget` (requires `destination`, `num_travelers`, `duration` (derived from `start_date` and `end_date`), `budget_tier` (must be 'Budget', 'Standard', or 'Luxury'), `accommodation_type`, `transport_mode`), **YOU MUST CALL THESE TOOLS IMMEDIATELY AND DIRECTLY. YOUR RESPONSE MUST BE ONLY THE TOOL CALLS.**
+            - **DO NOT engage in conversational turns or ask clarifying questions if all required parameters for `plan_itinerary` AND `calculate_budget` are present in the user's message or the current context.**
+            - **Example of immediate tool calls for a full plan (assuming all information is in the message or context):**
+              - User provides preferences for a trip to Paris from 2025-09-24 to 2025-10-04 for 2 travelers, Standard budget, Hotel, Flying, Cultural & Food preferences.
+              - Your expected action (two sequential tool calls, no other text):
+                `call:plan_itinerary(destination="Paris", start_date="2025-09-24", end_date="2025-10-04", preferences=["Cultural", "Food", "Hotel", "Flight"], num_travelers=2)`
+                `call:calculate_budget(destination="Paris", num_travelers=2, duration=11, budget_tier="Standard", accommodation_type="Hotel", transport_mode="Flight")`
+            - If `plan_itinerary` or `calculate_budget` is called, the system will format their outputs for the user. Your role is to ensure these tools are called promptly and correctly with all extracted parameters.
+            - Use `get_current_weather` for weather conditions if a location and date is provided.
+            - Use `search_nearby_places` for attractions, restaurants, and activities if a location and query is provided.
+            - Use `get_cultural_historical_context` for background information if a place is provided.
+            - Use `search_local_events` for events in the destination if a location and date is provided.
+            - Use `get_travel_directions` for route planning if an origin and destination are provided.
+            - Use `find_flights` and `find_hotels` to explore travel and accommodation options if requested and parameters are available.
+            - Present a few diverse options to the user and ask for their preferences if *after* initial planning, more research is needed or specific options are requested.
             
         3.  **Draft Itinerary Creation:**
             - After gathering preferences and researching options, use the `plan_itinerary` tool to create a day-wise itinerary.
@@ -500,8 +534,8 @@ class AIChatManager:
             - If the user provides their current GPS location (from `context.current_location`):
                 - Act as a real-time guide, providing suggestions and information about their immediate location (top attractions, events).
                 - Use `get_current_weather` for live weather updates.
-                - Use `get_travel_directions` for re-routing and navigation assistance.
                 - Use `search_nearby_places` to suggest nearby points of interest.
+                - Use `get_travel_directions` for re-routing and navigation assistance.
                 - **ALWAYS** use the provided `context.current_location` for location-based tool calls if the user's query implies "near me" or doesn't specify a different location.
             
         8.  **Post-Trip Follow-Up:**
@@ -509,11 +543,12 @@ class AIChatManager:
             
         **General Instructions:**
         - Maintain a friendly, helpful, and professional tone throughout the interaction.
-        - Always strive to fulfill the user's request using the most appropriate tools.
-        - If a tool call is needed, provide the required arguments clearly.
+        - Always strive to fulfill the user's request using the most appropriate tools. **Prioritize tool calls over conversational responses if all required arguments are available.**
+        - If a tool call is needed, provide the required arguments clearly and accurately based on the user's input. Pay close attention to extracting `duration` from `start_date` and `end_date` for `calculate_budget`, and ensure `budget_tier` is one of 'Budget', 'Standard', or 'Luxury'.
         - When presenting options or information, ensure it is clear, concise, and easy for the user to understand.
         - If you need more information to use a tool, ask specific clarifying questions.
         - Ensure all JSON output is valid and properly escaped.
+        - You have access to simulated tools for `plan_itinerary` and `calculate_budget`. Even if other external APIs are not configured, you should still use these simulated tools to generate a response.
         
         """
         prompt = ChatPromptTemplate.from_messages([
@@ -608,16 +643,71 @@ class AIChatManager:
 
             user_message_obj = HumanMessage(content=message)
 
-            # Use LangGraph to invoke the agent
-            if self.agent_graph:
-                inputs = {"messages": [user_message_obj], "current_location": context.current_location, "user_id": user_id, "trip_id": context.trip_id}
-                result = await self.agent_graph.ainvoke(inputs, config={"recursion_limit": 50})
-                ai_response_obj = result["messages"][-1]
+            # --- Custom Logic to Detect and Directly Invoke Planning Tools ---
+            # Check if the message is a comprehensive set of preferences from the form
+            if "**destination**" in message and "**start date**" in message and "**end date**" in message and "**num travelers**" in message:
+                logger.info("Detected comprehensive travel preferences. Directly invoking planning tools.")
                 
-                response_content = ai_response_obj.content
+                extracted_preferences = self._extract_preferences_from_message(message)
                 
-                # Format the AI's response into structured JSON
-                formatted_response = await self._format_ai_response(response_content, context)
+                # Update context with extracted preferences
+                context.current_destination = extracted_preferences.get("destination")
+                context.start_date = extracted_preferences.get("start_date")
+                context.end_date = extracted_preferences.get("end_date")
+                context.travelers_count = int(extracted_preferences.get("num_travelers", 1)) # Corrected field name
+                context.budget_tier = extracted_preferences.get("budget") # This is the tier name for now
+                context.destination_type = extracted_preferences.get("destination_type", [])
+                context.purpose = extracted_preferences.get("purpose", [])
+                context.accommodation_type = extracted_preferences.get("accommodation_type", [])
+                context.transport_mode = extracted_preferences.get("transport_mode", [])
+                context.special_needs = extracted_preferences.get("special_needs", [])
+                
+                # Derive duration
+                start_dt = datetime.strptime(context.start_date, "%Y-%m-%d")
+                end_dt = datetime.strptime(context.end_date, "%Y-%m-%d")
+                duration = (end_dt - start_dt).days + 1
+
+                # Prepare preferences list for plan_itinerary
+                preferences_list = []
+                if context.destination_type: preferences_list.extend(context.destination_type)
+                if context.purpose: preferences_list.extend(context.purpose)
+                if context.accommodation_type: preferences_list.extend(context.accommodation_type)
+                if context.transport_mode: preferences_list.extend(context.transport_mode)
+                if context.special_needs: preferences_list.extend(context.special_needs)
+                
+                # Directly invoke plan_itinerary
+                itinerary_response = await self.run_tool(
+                    tool_name="plan_itinerary",
+                    tool_args={
+                        "user_id": user_id,
+                        "destination": context.current_destination,
+                        "start_date": context.start_date,
+                        "end_date": context.end_date,
+                        "preferences": preferences_list,
+                        "num_travelers": context.travelers_count,
+                        "budget": context.budget_tier # Pass budget tier string
+                    },
+                    context=context
+                )
+                
+                # Directly invoke calculate_budget
+                cost_response = await self.run_tool(
+                    tool_name="calculate_budget",
+                    tool_args={
+                        "user_id": user_id,
+                        "destination": context.current_destination,
+                        "num_travelers": context.travelers_count,
+                        "duration": duration,
+                        "budget_tier": context.budget_tier,
+                        "accommodation_type": ", ".join(context.accommodation_type) if isinstance(context.accommodation_type, list) else context.accommodation_type,
+                        "transport_mode": ", ".join(context.transport_mode) if isinstance(context.transport_mode, list) else context.transport_mode,
+                    },
+                    context=context
+                )
+                
+                # Combine and format responses
+                combined_raw_response = f"```json\n{{\"Itinerary\": {itinerary_response}, \"Cost Breakdown\": {cost_response}}}\n```"
+                formatted_response = await self._format_ai_response(combined_raw_response, context)
                 
                 response = {
                     "content": json.dumps(formatted_response), # Serialize to JSON string for frontend
@@ -625,25 +715,62 @@ class AIChatManager:
                     "suggestions": await self._generate_travel_suggestions(context),
                     "next_steps": []
                 }
+                
             else:
-                # Fallback to simple intent analysis if LangGraph is not available
-                intent = await self._analyze_intent(message, context)
-                if intent["type"] == "travel_planning":
-                    response = await self._handle_travel_planning(message, context)
+                # --- Original LangGraph invocation for other queries ---
+                if self.agent_graph:
+                    inputs = {"messages": [user_message_obj], "current_location": context.current_location, "user_id": user_id, "trip_id": context.trip_id}
+                    result = await self.agent_graph.ainvoke(inputs, config={"recursion_limit": 50})
+                    ai_response_obj = result["messages"][-1]
+                    
+                    response_content = ai_response_obj.content
+                    
+                    # Format the AI's response into structured JSON
+                    formatted_response = await self._format_ai_response(response_content, context)
+                    
+                    response = {
+                        "content": json.dumps(formatted_response), # Serialize to JSON string for frontend
+                        "type": "travel_planning",
+                        "suggestions": await self._generate_travel_suggestions(context),
+                        "next_steps": []
+                    }
                 else:
-                    response = await self._generate_general_response(message, context)
+                    # Fallback to simple intent analysis if LangGraph is not available
+                    intent = await self._analyze_intent(message, context)
+                    if intent["type"] == "travel_planning":
+                        response = await self._handle_travel_planning(message, context)
+                    else:
+                        response = await self._generate_general_response(message, context)
 
+            # Ensure ai_response_obj is defined for _save_chat_session if direct tool invocation path is taken
+            if 'ai_response_obj' not in locals():
+                # Create a dummy AIMessage if tools were directly invoked
+                ai_response_obj = AIMessage(content=response.get("content", "Structured response generated by tools."))
 
             context.conversation_history.append({"role": "user", "content": message, "timestamp": datetime.utcnow().isoformat()})
             context.conversation_history.append({"role": "assistant", "content": response.get("content", "I am unable to generate a response at this time."), "timestamp": datetime.utcnow().isoformat()})
             
-            await self._save_chat_session(user_id, session_id, context, user_message_obj, ai_response_obj)
+            await self._save_chat_session(user_id, context.session_id, context, user_message_obj, ai_response_obj)
 
             return {"success": True, "response": response, "context": context}
         except Exception as e:
             logger.error(f"Error processing message: {e}")
             return {"success": False, "error": str(e), "response": {"content": "I apologize, but I encountered an error processing your request. Please try again or rephrase your question.", "type": "error"}}
 
+    def _extract_preferences_from_message(self, message: str) -> Dict[str, Any]:
+        """Helper to extract structured preferences from the incoming message string."""
+        preferences = {}
+        # Regex to find key-value pairs like **key**: value
+        # It handles multiline values by non-greedily matching until the next **key** or end of string
+        matches = re.findall(r'\*\*(.*?)\*\*:\s*(.*?)(?=\n\*\*|$)', message, re.DOTALL)
+        for key, value in matches:
+            formatted_key = key.strip().replace(' ', '_').lower()
+            # Special handling for list-like values
+            if formatted_key in ["destination_type", "purpose", "accommodation_type", "transport_mode", "special_needs"]:
+                preferences[formatted_key] = [item.strip() for item in value.split(',') if item.strip()]
+            else:
+                preferences[formatted_key] = value.strip()
+        return preferences
 
     async def _format_ai_response(self, raw_response: str, context: ChatContext) -> Dict[str, Any]:
         """Formats the AI's raw response into a structured JSON output, handling various tool outputs."""
@@ -664,22 +791,32 @@ class AIChatManager:
             try:
                 parsed_json = json.loads(json_match.group(1))
                 
-                # Check for specific tool outputs and format accordingly
-                if "days" in parsed_json and "destination" in parsed_json: # Likely Itinerary
-                    structured_output["Itinerary"] = parsed_json
-                    # Generate human-readable part from itinerary for direct display if needed
-                    structured_output["General Content"] = self._format_itinerary_to_human_readable(parsed_json)
-                    return structured_output
-                elif "total_estimated_cost" in parsed_json and "breakdown" in parsed_json: # Likely Cost Breakdown
-                    structured_output["Cost Breakdown"] = parsed_json
-                    structured_output["General Content"] = self._format_cost_breakdown_to_human_readable(parsed_json)
-                    return structured_output
-                elif "booking_id" in parsed_json and "status" in parsed_json: # Likely Booking Confirmation
-                    structured_output["Booking Confirmation"] = parsed_json
-                    structured_output["General Content"] = self._format_booking_confirmation_to_human_readable(parsed_json)
-                    return structured_output
-                elif all(key in parsed_json for key in ["Attractions", "Food", "Events"]): # General tourist guide output
-                    return parsed_json # If LLM already provided the full structure
+                itinerary_data = parsed_json.get("Itinerary")
+                cost_breakdown_data = parsed_json.get("Cost Breakdown")
+
+                general_content_parts = []
+
+                if itinerary_data and "days" in itinerary_data and "destination" in itinerary_data:
+                    structured_output["Itinerary"] = itinerary_data
+                    general_content_parts.append(self._format_itinerary_to_human_readable(itinerary_data))
+                
+                if cost_breakdown_data and "total_estimated_cost" in cost_breakdown_data and "breakdown" in cost_breakdown_data:
+                    structured_output["Cost Breakdown"] = cost_breakdown_data
+                    general_content_parts.append(self._format_cost_breakdown_to_human_readable(cost_breakdown_data))
+
+                if general_content_parts:
+                    structured_output["General Content"] = "\n\n".join(general_content_parts)
+                elif "General Content" in parsed_json: # Fallback if LLM provides directly
+                    structured_output["General Content"] = parsed_json["General Content"]
+                elif "content" in parsed_json: # Another fallback for generic content
+                    structured_output["General Content"] = parsed_json["content"]
+                
+                # If the parsed_json itself contains top-level keys like Attractions, Food etc., incorporate them
+                for key in ["Attractions", "Food", "Events", "Weather Tip", "Suggested Route", "Booking Confirmation"]:
+                    if key in parsed_json:
+                        structured_output[key] = parsed_json[key]
+                        
+                return structured_output
             except json.JSONDecodeError:
                 pass # Fallback to regex-based extraction
 
@@ -951,7 +1088,7 @@ class AIChatManager:
                         trip_id=str(chat_session.trip_id) if chat_session.trip_id else None,
                         current_destination=context_data.get("current_destination"),
                         travel_style=context_data.get("travel_style"),
-                        budget_range=tuple(context_data["budget_range"]) if "budget_range" in context_data and context_data["budget_range"] else None,
+                        budget_tier=context_data.get("budget_tier"),
                         preferences=context_data.get("preferences", []),
                         travelers_count=context_data.get("travelers_count", 1),
                         trip_duration=context_data.get("trip_duration"),
@@ -959,12 +1096,12 @@ class AIChatManager:
                         current_location=context_data.get("current_location"),
                         suggested_places=context_data.get("suggested_places", []),
                         conversation_history=context_data.get("conversation_history", []),
-                        destination_type=context_data.get("destination_type"),
-                        purpose=context_data.get("purpose"),
+                        destination_type=context_data.get("destination_type", []),
+                        purpose=context_data.get("purpose", []),
                         start_date=context_data.get("start_date"),
                         end_date=context_data.get("end_date"),
-                        accommodation_type=context_data.get("accommodation_type"),
-                        transport_mode=context_data.get("transport_mode"),
+                        accommodation_type=context_data.get("accommodation_type", []),
+                        transport_mode=context_data.get("transport_mode", []),
                         special_needs=context_data.get("special_needs", []),
                     )
                     # Also load chat messages to rebuild history
@@ -989,7 +1126,7 @@ class AIChatManager:
             )
             
             # Create a new session in DB for this user
-            await self._create_chat_session_in_db(db_session, user_id, new_context.session_id, new_context.model_dump_json())
+            await self._create_chat_session_in_db(db_session, user_id, new_context.session_id, new_context)
             logger.info(f"Created new chat session {new_context.session_id} for user {user_id}.")
             return new_context
         finally:
@@ -1003,6 +1140,10 @@ class AIChatManager:
         user_message: HumanMessage,
         ai_response: AIMessage,
     ):
+        if not session_id:
+            logger.error(f"Attempted to save chat messages without a valid session_id for user {user_id}. Aborting save.")
+            raise ValueError("Cannot save chat session without a valid session ID.")
+
         try:
             with SessionLocal() as db:
                 # Find or create ChatSession
@@ -1042,7 +1183,7 @@ class AIChatManager:
             db.add(ai_chat_message)
             db.commit() # Commit after adding AI message
             db.refresh(ai_chat_message)
-            
+
         except Exception as e:
             logger.error(f"Error saving chat session for user {user_id}, session {session_id}: {e}")
             raise
@@ -1244,17 +1385,17 @@ class AIChatManager:
                 chat_session = db.query(ChatSession).filter_by(id=UUID(session_id)).first() if session_id else None
                 if not chat_session:
                     logger.info(f"No chat session found for session ID: {session_id}")
-                    return []
+            return []
                 
                 # Retrieve messages for the session
-                messages = db.query(ChatMessage).filter_by(session_id=chat_session.id).order_by(ChatMessage.created_at).all()
-                history = [{
+            messages = db.query(ChatMessage).filter_by(session_id=chat_session.id).order_by(ChatMessage.created_at).all()
+            history = [{
                     "role": msg.role,
                     "content": msg.content,
                     "timestamp": msg.created_at.isoformat()
                 } for msg in messages]
-                logger.info(f"Retrieved {len(history)} messages for session {session_id}")
-                return history
+            logger.info(f"Retrieved {len(history)} messages for session {session_id}")
+            return history
         except Exception as e:
             logger.error(f"Error retrieving chat history for user {user_id}, session {session_id}: {e}")
             raise # Re-raise the exception to propagate it
@@ -1264,8 +1405,8 @@ class AIChatManager:
     ) -> str:
         try:
             from uuid import UUID
-            # Generate a new UUID for the session
-            session_id = str(UUID(user_id) if user_id and len(user_id) == 36 else UUID.uuid4()) # Use user_id as a base for session_id or generate new if user_id is not a valid UUID string.
+            # Always generate a new unique UUID for the session
+            session_id = str(uuid.uuid4()) 
             
             # Create an initial ChatContext
             initial_context = ChatContext(
@@ -1286,6 +1427,28 @@ class AIChatManager:
             return session_id
         except Exception as e:
             logger.error(f"Error creating new session for user {user_id}: {e}")
+            raise
+
+    async def delete_chat_session(self, session_id: str):
+        try:
+            from uuid import UUID
+            with SessionLocal() as db:
+                session_uuid = UUID(session_id)
+
+                # Delete all chat messages associated with the session
+                db.query(ChatMessage).filter_by(session_id=session_uuid).delete()
+                logger.info(f"Deleted all messages for session {session_id}.")
+
+                # Delete the chat session itself
+                chat_session = db.query(ChatSession).filter_by(id=session_uuid).first()
+                if chat_session:
+                    db.delete(chat_session)
+                    db.commit()
+                    logger.info(f"Chat session {session_id} permanently deleted from DB.")
+                else:
+                    logger.warning(f"Attempted to delete non-existent session {session_id}.")
+        except Exception as e:
+            logger.error(f"Error deleting chat session {session_id}: {e}")
             raise
 
 
@@ -1329,13 +1492,8 @@ class ChatSessionManager:
         try:
             if session_id in self.active_sessions:
                 del self.active_sessions[session_id]
-            with SessionLocal() as db:
-                chat_session = db.query(ChatSession).filter_by(id=UUID(session_id)).first()
-                if chat_session:
-                    chat_session.is_active = False
-                    chat_session.updated_at = datetime.utcnow()
-                    db.commit()
-                    logger.info(f"Session {session_id} marked as inactive in DB.")
+            # The permanent deletion from DB is now handled by AIChatManager.delete_chat_session
+            logger.info(f"Session {session_id} removed from active sessions.")
         except Exception as e:
             logger.error(f"Error ending session {session_id}: {e}")
             raise

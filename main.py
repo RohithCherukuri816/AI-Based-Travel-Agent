@@ -4,9 +4,15 @@ from pydantic import BaseModel
 from typing import List, Dict, Any, Optional
 import uvicorn
 import logging
+from dotenv import load_dotenv # Import load_dotenv
+import os # Import os to access environment variables
 
 from ai_chat import chat_endpoint, start_chat_session, get_chat_history, ChatContext
 from database import init_db # Import init_db from your database setup
+from ai_chat import get_chat_manager # Import get_chat_manager for session deletion
+
+# Load environment variables from .env file
+load_dotenv()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -79,7 +85,6 @@ async def chat_with_ai(request: ChatRequest):
         # The process_message function in ai_chat.py now expects context to be passed,
         # and current_location is part of ChatContext. We need to fetch/create context first.
         # This ensures the AI manager always gets a full context object.
-        from ai_chat import get_chat_manager # Import locally to avoid circular dependency if needed
         manager = get_chat_manager()
         
         # Retrieve or create context, passing current_location from request
@@ -110,6 +115,15 @@ async def get_user_chat_history(user_id: str, session_id: Optional[str] = None):
         logger.error(f"Error retrieving chat history for user {user_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to retrieve history: {e}")
 
+@app.delete("/delete_session", tags=["Chat"])
+async def delete_chat_session(session_id: str):
+    try:
+        manager = get_chat_manager()
+        await manager.ai_manager.delete_chat_session(session_id)
+        return {"message": "Chat session deleted successfully."}
+    except Exception as e:
+        logger.error(f"Error deleting chat session {session_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to delete session: {e}")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)

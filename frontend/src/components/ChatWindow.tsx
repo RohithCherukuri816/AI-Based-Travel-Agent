@@ -1,9 +1,12 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 
 interface Message {
   id: string;
   sender: 'user' | 'ai';
-  content: string | React.ReactElement; // Allow content to be a string or a React.ReactElement
+  content: string | React.ReactElement;
+  itinerary?: any;
+  costBreakdown?: any;
+  bookingConfirmation?: any;
 }
 
 interface ChatWindowProps {
@@ -11,13 +14,22 @@ interface ChatWindowProps {
 }
 
 const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    // Scroll to the latest message
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
   return (
-    <div className="chat-window">
+    <div className="chat-messages">
       {messages.map((message) => (
         <div key={message.id} className={`chat-message ${message.sender}`}>
           <div className="message-content">{message.content}</div>
         </div>
       ))}
+      {/* This invisible div acts as the scroll target */}
+      <div ref={messagesEndRef} />
     </div>
   );
 };

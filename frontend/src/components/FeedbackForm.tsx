@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 
 interface FeedbackFormProps {
-  onSubmitFeedback: (rating: number, comments: string) => void;
+  onSubmitFeedback: (tripId: string, rating: number, comments: string) => void;
   tripId: string; // Assuming we know which trip the feedback is for
 }
 
@@ -17,7 +17,7 @@ const FeedbackForm: React.FC<FeedbackFormProps> = ({ onSubmitFeedback, tripId })
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (rating > 0) {
-      onSubmitFeedback(rating, comments);
+      onSubmitFeedback(tripId, rating, comments);
       setSubmitted(true);
     } else {
       alert("Please provide a rating (1-5 stars).");
