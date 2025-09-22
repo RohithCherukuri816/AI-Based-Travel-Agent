@@ -8,13 +8,44 @@ from typing import List, Optional, Dict, Any
 from enum import Enum
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text, 
-    ForeignKey, JSON, Enum as SQLEnum, Index, UniqueConstraint
+    ForeignKey, Index, UniqueConstraint, Enum as SQLEnum
 )
+from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy.dialects.postgresql import UUID # Keep UUID for now as it might be handled differently or replaced later
 from pydantic import BaseModel, Field, validator
 import uuid
-from .database import Base # Import Base from database.py
+import json
+
+from database import Base # Import Base from database.py
+
+# Custom Type for JSON-encoded lists (for SQLite compatibility)
+class JSONEncodedList(TypeDecorator):
+    impl = TEXT
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return value
+
+# Custom Type for JSON-encoded dictionaries (for SQLite compatibility)
+class JSONEncodedDict(TypeDecorator):
+    impl = TEXT
+
+    def process_bind_param(self, value, dialect):
+        if value is not None:
+            return json.dumps(value)
+        return value
+
+    def process_result_value(self, value, dialect):
+        if value is not None:
+            return json.loads(value)
+        return value
 
 # Base = declarative_base() # Removed as Base is now imported
 
@@ -65,7 +96,7 @@ class User(Base):
     profile_picture = Column(String(500))
     phone_number = Column(String(20))
     date_of_birth = Column(DateTime)
-    preferences = Column(JSON)  # Travel preferences, interests, etc.
+    preferences = Column(JSONEncodedDict)  # Travel preferences, interests, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     last_login = Column(DateTime)
@@ -103,8 +134,8 @@ class Trip(Base):
     travel_style = Column(String(50))  # luxury, budget, adventure, etc.
     travelers_count = Column(Integer, default=1)
     is_public = Column(Boolean, default=False)
-    tags = Column(ARRAY(String))
-    trip_metadata = Column(JSON)  # Additional trip data
+    tags = Column(JSONEncodedList) # Changed to JSONEncodedList
+    trip_metadata = Column(JSONEncodedDict)  # Additional trip data
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -132,8 +163,8 @@ class ItineraryDay(Base):
     trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
     day_number = Column(Integer, nullable=False)
     date = Column(DateTime, nullable=False)
-    weather_forecast = Column(JSON)
-    activities = Column(JSON)  # Structured activity data
+    weather_forecast = Column(JSONEncodedDict) # Changed to JSONEncodedDict
+    activities = Column(JSONEncodedDict)  # Structured activity data
     notes = Column(Text)
     estimated_cost = Column(Float, default=0.0)
     actual_cost = Column(Float, default=0.0)
@@ -166,7 +197,7 @@ class Booking(Base):
     travel_date = Column(DateTime, nullable=False)
     price = Column(Float, nullable=False)
     currency = Column(String(3), default="USD")
-    details = Column(JSON)  # Booking-specific details
+    details = Column(JSONEncodedDict)  # Booking-specific details
     cancellation_policy = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -195,7 +226,7 @@ class Payment(Base):
     payment_method = Column(String(50), nullable=False)  # stripe, paypal, etc.
     payment_status = Column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING)
     transaction_id = Column(String(100), unique=True)
-    gateway_response = Column(JSON)
+    gateway_response = Column(JSONEncodedDict) # Changed to JSONEncodedDict
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -220,7 +251,7 @@ class Collaboration(Base):
     trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     role = Column(String(50), default="collaborator")  # owner, collaborator, viewer
-    permissions = Column(ARRAY(String))  # edit, view, book, etc.
+    permissions = Column(JSONEncodedList) # Changed to JSONEncodedList
     joined_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     
@@ -249,7 +280,7 @@ class Expense(Base):
     date = Column(DateTime, nullable=False)
     receipt_url = Column(String(500))
     is_shared = Column(Boolean, default=False)
-    shared_with = Column(ARRAY(UUID(as_uuid=True)))  # User IDs to split with
+    shared_with = Column(JSONEncodedList) # Changed to JSONEncodedList
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -276,7 +307,7 @@ class Review(Base):
     rating = Column(Integer, nullable=False)  # 1-5 stars
     title = Column(String(200))
     content = Column(Text)
-    photos = Column(ARRAY(String))  # Photo URLs
+    photos = Column(JSONEncodedList) # Changed to JSONEncodedList
     helpful_votes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -303,7 +334,7 @@ class Notification(Base):
     title = Column(String(200), nullable=False)
     message = Column(Text, nullable=False)
     is_read = Column(Boolean, default=False)
-    data = Column(JSON)  # Additional notification data
+    data = Column(JSONEncodedDict)  # Additional notification data
     scheduled_at = Column(DateTime)
     sent_at = Column(DateTime)
     created_at = Column(DateTime, default=datetime.utcnow)
@@ -326,7 +357,7 @@ class UserAnalytics(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     event_type = Column(String(100), nullable=False)  # page_view, search, booking, etc.
-    event_data = Column(JSON)
+    event_data = Column(JSONEncodedDict) # Changed to JSONEncodedDict
     session_id = Column(String(100))
     user_agent = Column(Text)
     ip_address = Column(String(45))
@@ -352,7 +383,7 @@ class ChatSession(Base):
     trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"))
     session_title = Column(String(200))
     ai_model = Column(String(100))
-    context = Column(JSON)  # Chat context and user preferences
+    context = Column(JSONEncodedDict)  # Chat context and user preferences
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -377,7 +408,7 @@ class ChatMessage(Base):
     session_id = Column(UUID(as_uuid=True), ForeignKey("chat_sessions.id"), nullable=False)
     role = Column(String(20), nullable=False)  # user, assistant, system
     content = Column(Text, nullable=False)
-    trip_metadata = Column(JSON)  # Message metadata, tokens, etc.
+    trip_metadata = Column(JSONEncodedDict)  # Message metadata, tokens, etc.
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # Relationships

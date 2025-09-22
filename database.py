@@ -43,7 +43,7 @@ def init_db():
     """Initialize the database by creating all tables"""
     try:
         # Import all models here so that SQLAlchemy can find them and create tables
-        from . import models 
+        import models 
         Base.metadata.create_all(bind=engine)
         logger.info("Database tables created successfully or already exist.")
     except Exception as e:

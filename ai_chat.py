@@ -12,6 +12,8 @@ from typing import List, Dict, Any, Optional, Tuple, Annotated
 from dataclasses import dataclass
 from enum import Enum
 from uuid import UUID # Added for database operations
+from pydantic import BaseModel # Import BaseModel
+import uuid # Import the uuid module
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -49,21 +51,20 @@ class AIModel(str, Enum):
     GEMINI_PRO = "gemini-pro"
 
 
-@dataclass
-class ChatContext:
+class ChatContext(BaseModel):
     """Chat context and user preferences"""
     user_id: str
     trip_id: Optional[str] = None
     current_destination: Optional[str] = None
     travel_style: Optional[str] = None
     budget_range: Optional[Tuple[float, float]] = None
-    preferences: List[str] = None
+    preferences: List[str] = [] # Initialize as empty list
     travelers_count: int = 1
     trip_duration: Optional[int] = None
     language: str = "en"
     current_location: Optional[Dict[str, float]] = None # New field for user's current GPS location
-    suggested_places: List[Dict[str, Any]] = None # To track suggested places and prevent duplicates
-    conversation_history: List[Dict[str, Any]] = None # To store the conversation history
+    suggested_places: List[Dict[str, Any]] = [] # To track suggested places and prevent duplicates
+    conversation_history: List[Dict[str, Any]] = [] # To store the conversation history
     
     # New fields for detailed requirement gathering
     destination_type: Optional[str] = None # beach, mountains, cultural, adventure, etc.
@@ -72,7 +73,7 @@ class ChatContext:
     end_date: Optional[str] = None
     accommodation_type: Optional[str] = None # hotel, resort, hostel, Airbnb
     transport_mode: Optional[str] = None # flight, train, car, bus
-    special_needs: List[str] = None # dietary restrictions, accessibility needs
+    special_needs: List[str] = [] # dietary restrictions, accessibility needs
 
     def __post_init__(self):
         if self.preferences is None:
@@ -453,7 +454,8 @@ class AIChatManager:
         
         1.  **Requirement Gathering (User Preferences):**
             - Start by greeting the user warmly and introducing yourself as their AI travel agent. 
-            - **Crucially, begin asking structured questions one by one to gather detailed user preferences for their trip.** This includes:
+            - **Crucially, if the user provides a comprehensive set of travel preferences in a single message (e.g., from a form submission), immediately proceed to generate a draft itinerary and cost breakdown using your tools.** Do NOT ask for individual details if they are already provided.
+            - If information is missing, then ask structured questions one by one to gather detailed user preferences for their trip. This includes:
                 - **Destination (City/Country):** Where do they want to go?
                 - **Destination Type:** (e.g., beach, mountains, cultural, adventure, relaxation)
                 - **Purpose of Trip:** (e.g., honeymoon, family vacation, business, leisure, solo adventure)
@@ -463,12 +465,13 @@ class AIChatManager:
                 - **Accommodation Type:** (e.g., hotel, resort, hostel, Airbnb, guesthouse)
                 - **Preferred Transport Mode:** (e.g., flight, train, car, bus, cruise)
                 - **Special Needs/Interests:** Any dietary restrictions, accessibility needs, specific activities, or interests (e.g., historical sites, art, nightlife, nature)?
-            - **Ask one question at a time and wait for the user's response.** Acknowledge their input and then ask the next relevant question.
-            - **Prioritize gathering all essential information before moving to the next stage.**
-            - **Dynamically update the ChatContext with gathered information.**
+            - If you ask a question, ask one question at a time and wait for the user's response. Acknowledge their input and then ask the next relevant question.
+            - Prioritize gathering all essential information before moving to the next stage.
+            - Dynamically update the ChatContext with gathered information.
             
         2.  **Research & Options (using Tools):**
-            - Once you have initial requirements, proactively use your tools to research and present options.
+            - Once you have all initial requirements, proactively use your tools to research and present options.
+            - **After receiving comprehensive preferences, immediately call `plan_itinerary` and `calculate_budget` tools with the collected details.**
             - Use `get_current_weather` for weather conditions.
             - Use `search_nearby_places` for attractions, restaurants, and activities.
             - Use `get_cultural_historical_context` for background information.
@@ -942,13 +945,13 @@ class AIChatManager:
                 chat_session = db_session.query(ChatSession).filter_by(id=UUID(session_id), user_id=user_uuid).first()
                 if chat_session:
                     # Load existing context
-                    context_data = chat_session.context
+                    context_data = chat_session.context if chat_session.context else {} # Ensure context_data is a dict
                     context = ChatContext(
                         user_id=user_id,
                         trip_id=str(chat_session.trip_id) if chat_session.trip_id else None,
                         current_destination=context_data.get("current_destination"),
                         travel_style=context_data.get("travel_style"),
-                        budget_range=tuple(context_data["budget_range"]) if "budget_range" in context_data else None,
+                        budget_range=tuple(context_data["budget_range"]) if "budget_range" in context_data and context_data["budget_range"] else None,
                         preferences=context_data.get("preferences", []),
                         travelers_count=context_data.get("travelers_count", 1),
                         trip_duration=context_data.get("trip_duration"),
@@ -974,40 +977,24 @@ class AIChatManager:
                     logger.info(f"Loaded existing chat session {session_id} for user {user_id}.")
                     return context
 
-            # If no session_id or session not found, create a new context and session
-            if current_location is None:
-                current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
+            # If no session_id or session not found, create a new context and session with a *new* unique ID
+            current_location = {"lat": 48.8584, "lon": 2.2945}  # Default to Eiffel Tower, Paris for testing
+            new_session_id_for_context = str(uuid.uuid4()) # Always generate a fresh UUID for a new context
             
             new_context = ChatContext(
                 user_id=user_id,
-                trip_id=session_id, # If no trip_id explicitly passed, use session_id for now
-                preferences=["culture", "food", "adventure"],
-                travelers_count=1,
-                current_location=current_location,
-                suggested_places=[],
-                conversation_history=[]
+                session_id=new_session_id_for_context,
+                conversation_history=[],
+                current_location=current_location # Set initial location
             )
             
-            # Create a new ChatSession in the database for the new context
-            new_session_id = session_id if session_id else str(UUID(user_id) if user_id else UUID.uuid4()) # Use user_id as session_id if not provided
-            new_chat_session = ChatSession(
-                id=UUID(new_session_id), # Ensure it's a UUID
-                user_id=user_uuid,
-                session_title="New Chat Session",
-                ai_model=AIModel.GEMINI_PRO.value,
-                context=new_context.__dict__,
-                is_active=True
-            )
-            db_session.add(new_chat_session)
-            db_session.commit()
-            db_session.refresh(new_chat_session)
-            
-            logger.info(f"Created new chat session {new_session_id} for user {user_id}.")
-            new_context.trip_id = str(new_chat_session.trip_id) if new_chat_session.trip_id else new_session_id # Update trip_id in context if it was None
+            # Create a new session in DB for this user
+            await self._create_chat_session_in_db(db_session, user_id, new_context.session_id, new_context.model_dump_json())
+            logger.info(f"Created new chat session {new_context.session_id} for user {user_id}.")
             return new_context
         finally:
             db_session.close()
-
+    
     async def _save_chat_session(
         self,
         user_id: str,
@@ -1019,38 +1006,43 @@ class AIChatManager:
         try:
             with SessionLocal() as db:
                 # Find or create ChatSession
-                chat_session = db.query(ChatSession).filter_by(id=session_id).first()
+                chat_session = db.query(ChatSession).filter_by(id=UUID(session_id)).first()
                 if not chat_session:
                     # This case should ideally not be hit if sessions are always created via `_get_or_create_context` or `create_new_session`
                     logger.warning(f"Attempted to save message for non-existent session {session_id}. Creating new session.")
-                    chat_session = await self._create_chat_session_in_db(db, user_id, session_id, context)
+                    # Remove this line, as _get_or_create_context should handle session creation
+                    # chat_session = await self._create_chat_session_in_db(db, user_id, session_id, context)
+                    # If for some reason chat_session is still None, it means there's a logic error earlier
+                    raise ValueError(f"Chat session {session_id} not found after attempting to get or create.")
                 else:
                     # Update context if session exists
-                    chat_session.context = context.__dict__
+                    chat_session.context = context.model_dump()
                     chat_session.updated_at = datetime.utcnow()
                     db.commit()
                     db.refresh(chat_session)
 
-                # Save user message
-                user_chat_message = ChatMessage(
-                    session_id=chat_session.id,
-                    role="user",
-                    content=user_message.content,
-                    trip_metadata=context.__dict__,
-                )
-                db.add(user_chat_message)
+            # Save user message
+            user_chat_message = ChatMessage(
+                session_id=chat_session.id,
+                role="user",
+                content=user_message.content,
+                trip_metadata=context.model_dump(),
+            )
+            db.add(user_chat_message)
+            db.commit() # Commit after adding user message
+            db.refresh(user_chat_message)
 
-                # Save AI response
-                ai_chat_message = ChatMessage(
-                    session_id=chat_session.id,
-                    role="assistant",
-                    content=ai_response.content,
-                    trip_metadata=context.__dict__,
-                )
-                db.add(ai_chat_message)
-
-                db.commit()
-                logger.info(f"Chat session {session_id} and messages saved for user {user_id}.")
+            # Save AI response
+            ai_chat_message = ChatMessage(
+                session_id=chat_session.id,
+                role="assistant",
+                content=ai_response.content,
+                trip_metadata=context.model_dump(),
+            )
+            db.add(ai_chat_message)
+            db.commit() # Commit after adding AI message
+            db.refresh(ai_chat_message)
+            
         except Exception as e:
             logger.error(f"Error saving chat session for user {user_id}, session {session_id}: {e}")
             raise

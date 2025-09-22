@@ -1,0 +1,534 @@
+.App {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.App-logo {
+  height: 40vmin;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .App-logo {
+    animation: App-logo-spin infinite 20s linear;
+  }
+}
+
+.App-header {
+  background-color: #6a0dad; /* Deep Purple */
+  padding: 20px;
+  color: white;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  margin-bottom: 20px;
+}
+
+.App-header h1 {
+  margin: 0;
+  font-size: 2.5em;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.App-main {
+  display: flex;
+  flex: 1;
+  justify-content: center;
+  padding: 20px;
+  gap: 30px; /* Space between chat and form */
+  flex-wrap: wrap; /* Allow wrapping on smaller screens */
+}
+
+.chat-container {
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  width: 450px;
+  max-width: 90%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 2px solid #FFD700; /* Golden border */
+}
+
+.travel-form-container {
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  width: 500px;
+  max-width: 90%;
+  padding: 30px;
+  border: 2px solid #FF6B81; /* Pink border */
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; /* Align form content to the top */
+  overflow-y: auto; /* Enable scrolling for long forms */
+}
+
+.chat-window {
+  flex: 1;
+  padding: 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.chat-message {
+  display: flex;
+  width: 100%;
+}
+
+.chat-message.user {
+  justify-content: flex-end;
+}
+
+.chat-message.ai {
+  justify-content: flex-start;
+}
+
+.message-content {
+  max-width: 70%;
+  padding: 12px 18px;
+  border-radius: 20px;
+  font-size: 0.95em;
+  line-height: 1.4;
+  word-wrap: break-word;
+}
+
+.chat-message.user .message-content {
+  background-color: #00BFFF; /* Deep Sky Blue */
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+
+.chat-message.ai .message-content {
+  background-color: #FFC0CB; /* Pink */
+  color: #333;
+  border-bottom-left-radius: 5px;
+}
+
+.message-input-form {
+  display: flex;
+  padding: 15px;
+  border-top: 1px solid #eee;
+  background-color: #f8f8f8;
+}
+
+.message-input {
+  flex: 1;
+  padding: 12px;
+  border: 1px solid #ddd;
+  border-radius: 25px;
+  margin-right: 10px;
+  font-size: 1em;
+}
+
+.message-input:focus {
+  outline: none;
+  border-color: #6a0dad; /* Deep Purple */
+  box-shadow: 0 0 5px rgba(106, 13, 173, 0.5);
+}
+
+.send-button {
+  background-color: #FF6B81; /* Pink */
+  color: white;
+  border: none;
+  border-radius: 25px;
+  padding: 12px 20px;
+  cursor: pointer;
+  font-size: 1em;
+  font-weight: bold;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.send-button:hover {
+  background-color: #FF4757; /* Brighter Pink */
+  transform: translateY(-2px);
+}
+
+.travel-form h2 {
+  color: #6a0dad; /* Deep Purple */
+  margin-bottom: 25px;
+  font-size: 2em;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+.form-group {
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.form-group label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: bold;
+  color: #555;
+  font-size: 0.95em;
+}
+
+.form-group input[type="text"],
+.form-group input[type="date"],
+.form-group input[type="number"] {
+  width: calc(100% - 24px); /* Account for padding */
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1em;
+  transition: border-color 0.3s ease;
+}
+
+.form-group input[type="text"]:focus,
+.form-group input[type="date"]:focus,
+.form-group input[type="number"]:focus {
+  outline: none;
+  border-color: #00BFFF; /* Deep Sky Blue */
+  box-shadow: 0 0 5px rgba(0, 191, 255, 0.4);
+}
+
+.special-needs-input {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.special-needs-input input {
+  flex: 1;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+}
+
+.special-needs-input button {
+  background-color: #9370DB; /* Medium Purple */
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 10px 15px;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.special-needs-input button:hover {
+  background-color: #8A2BE2; /* Blue Violet */
+}
+
+.special-needs-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 15px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.special-needs-list li {
+  background-color: #FFD700; /* Golden */
+  color: #333;
+  padding: 8px 12px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.9em;
+}
+
+.special-needs-list button {
+  background: none;
+  border: none;
+  color: #8B4513; /* SaddleBrown */
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1em;
+}
+
+.submit-button {
+  background-color: #FF6B81; /* Pink */
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 15px 25px;
+  font-size: 1.1em;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 30px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.submit-button:hover {
+  background-color: #FF4757; /* Brighter Pink */
+  transform: translateY(-2px);
+}
+
+@media (max-width: 900px) {
+  .App-main {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .chat-container,
+  .travel-form-container {
+    width: 95%;
+  }
+}
+
+/* Styling for ItineraryDisplay */
+.itinerary-display-card,
+.cost-breakdown-card,
+.booking-confirmation-card {
+  background-color: #f0f8ff; /* AliceBlue - Light and fresh */
+  border-radius: 12px;
+  padding: 25px;
+  margin-bottom: 20px;
+  box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+  border: 1px solid #ADD8E6; /* LightBlue border */
+  text-align: left;
+}
+
+.itinerary-title,
+.cost-breakdown-title,
+.confirmation-title {
+  color: #483D8B; /* DarkSlateBlue - Strong heading color */
+  font-size: 1.8em;
+  margin-bottom: 15px;
+  border-bottom: 2px solid #9370DB; /* Medium Purple underline */
+  padding-bottom: 10px;
+}
+
+.itinerary-dates,
+.itinerary-meta,
+.cost-breakdown-meta {
+  color: #555;
+  font-size: 0.95em;
+  margin-bottom: 10px;
+}
+
+.itinerary-days-container {
+  margin-top: 20px;
+}
+
+.itinerary-day {
+  background-color: #FFFFFF; /* Pure White for day cards */
+  border-radius: 10px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+  border: 1px solid #DDA0DD; /* Plum - soft border */
+}
+
+.day-header {
+  color: #8A2BE2; /* Blue Violet */
+  font-size: 1.3em;
+  margin-top: 0;
+  margin-bottom: 10px;
+}
+
+.activity-list {
+  list-style: none;
+  padding: 0;
+}
+
+.activity-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  margin-bottom: 8px;
+  line-height: 1.3;
+}
+
+.activity-time {
+  font-weight: bold;
+  color: #4682B4; /* SteelBlue */
+  margin-right: 8px;
+}
+
+.activity-description {
+  color: #333;
+  flex: 1;
+}
+
+.activity-backup {
+  font-style: italic;
+  color: #778899; /* LightSlateGray */
+  margin-left: 10px;
+  font-size: 0.85em;
+}
+
+/* Styling for CostBreakdownDisplay */
+.breakdown-details {
+  margin-top: 20px;
+  border-top: 1px dashed #ccc;
+  padding-top: 15px;
+}
+
+.detail-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dotted #eee;
+}
+
+.detail-item:last-child {
+  border-bottom: none;
+}
+
+.detail-label {
+  color: #6a0dad; /* Deep Purple */
+  font-weight: 500;
+}
+
+.detail-value {
+  font-weight: bold;
+  color: #333;
+}
+
+.total-cost {
+  display: flex;
+  justify-content: space-between;
+  padding: 15px 0;
+  margin-top: 20px;
+  border-top: 2px solid #FF6B81; /* Pink */
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #FF4500; /* OrangeRed - Highlight total */
+}
+
+/* Styling for BookingConfirmationDisplay */
+.confirmation-details p {
+  margin-bottom: 8px;
+  font-size: 1em;
+  color: #333;
+}
+
+.confirmation-details strong {
+  color: #6a0dad; /* Deep Purple */
+}
+
+.confirmation-message {
+  margin-top: 20px;
+  font-style: italic;
+  color: #555;
+  font-size: 0.95em;
+  border-top: 1px dashed #ccc;
+  padding-top: 15px;
+}
+
+.status-confirmed {
+  color: #28a745; /* Green */
+  font-weight: bold;
+}
+
+.status-pending {
+  color: #ffc107; /* Amber */
+  font-weight: bold;
+}
+
+.status-cancelled {
+  color: #dc3545; /* Red */
+  font-weight: bold;
+}
+
+/* Styling for FeedbackForm */
+.feedback-form-card {
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent white */
+  border-radius: 15px;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.25);
+  padding: 30px;
+  border: 2px solid #00BFFF; /* Deep Sky Blue border */
+  margin-top: 30px; /* Space from other elements */
+  text-align: center;
+}
+
+.feedback-form-card h2 {
+  color: #6a0dad; /* Deep Purple */
+  font-size: 2em;
+  margin-bottom: 15px;
+}
+
+.feedback-subtitle {
+  color: #555;
+  font-size: 1em;
+  margin-bottom: 25px;
+}
+
+.star-rating {
+  display: flex;
+  justify-content: center;
+  margin-top: 10px;
+  margin-bottom: 20px;
+}
+
+.star {
+  font-size: 2.5em;
+  color: #ccc; /* Gray for unselected stars */
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.star.filled {
+  color: #FFD700; /* Golden for selected stars */
+}
+
+.feedback-form-card textarea {
+  width: calc(100% - 24px);
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 1em;
+  resize: vertical;
+  min-height: 100px;
+  margin-top: 10px;
+  transition: border-color 0.3s ease;
+}
+
+.feedback-form-card textarea:focus {
+  outline: none;
+  border-color: #00BFFF; /* Deep Sky Blue */
+  box-shadow: 0 0 5px rgba(0, 191, 255, 0.4);
+}
+
+.submit-feedback-button {
+  background-color: #FF6B81; /* Pink */
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.submit-feedback-button:hover {
+  background-color: #FF4757; /* Brighter Pink */
+  transform: translateY(-2px);
+}
+
+.feedback-submitted {
+  background-color: #e6ffe6; /* Light Green for submitted state */
+  border-color: #28a745; /* Green border */
+  color: #28a745;
+}
+
+.feedback-submitted h2 {
+  color: #28a745;
+}
+
+.show-feedback-button {
+  background-color: #9370DB; /* Medium Purple */
+  color: white;
+  border: none;
+  border-radius: 10px;
+  padding: 12px 20px;
+  font-size: 1em;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 20px;
+  transition: background-color 0.3s ease, transform 0.2s ease;
+}
+
+.show-feedback-button:hover {
+  background-color: #8A2BE2; /* Blue Violet */
+  transform: translateY(-2px);
+}
