@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 
 const heroStyles = `
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
@@ -207,15 +208,15 @@ const HeroSection: React.FC = () => {
               Experience the future of travel planning with our advanced AI agents. Get personalized itineraries, real-time pricing, and intelligent recommendations in seconds.
             </p>
             <div className="hero-actions">
-              <button className="btn btn-primary">
-                <i className="fas fa-magic"></i>
-                Start Planning
-              </button>
-              <button className="btn btn-outline">
-                <i className="fas fa-play"></i>
-                Watch Demo
-              </button>
-            </div>
+  <Link to="/planning" className="btn btn-primary">
+    <i className="fas fa-magic"></i>
+    Start Planning
+  </Link>
+  <button className="btn btn-outline">
+    <i className="fas fa-play"></i>
+    Watch Demo
+  </button>
+</div>
             <div className="hero-stats">
               <div className="stat-item">
                 <div className="stat-number">10K+</div>

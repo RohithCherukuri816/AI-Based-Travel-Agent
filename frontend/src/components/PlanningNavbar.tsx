@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import '../App.css'; // Assuming App.css contains global styles including navbar
+import '../App.css'; // Assuming App.css contains global styles
 
-const Navbar: React.FC = () => {
+const PlanningNavbar: React.FC = () => {
   return (
     <nav className="navbar">
       <div className="nav-container">
@@ -11,9 +11,9 @@ const Navbar: React.FC = () => {
           <span>AI Travel Agent</span>
         </div>
         <div className="nav-menu">
-          <Link to="/" className="nav-link">Home</Link>
-          <Link to="/features" className="nav-link">Features</Link>
-          <Link to="/about-developer" className="nav-link">About Developer</Link>
+          <Link to="/planning" className="nav-link">Start Planning</Link>
+          <Link to="/chat" className="nav-link">AI Chat</Link>
+          <Link to="/budget-calculator" className="nav-link">Budget Calculator</Link>
         </div>
         <div className="nav-actions">
           <button className="btn btn-outline" id="loginBtn">Login</button>
@@ -29,4 +29,4 @@ const Navbar: React.FC = () => {
   );
 };
 
-export default Navbar;
+export default PlanningNavbar;
