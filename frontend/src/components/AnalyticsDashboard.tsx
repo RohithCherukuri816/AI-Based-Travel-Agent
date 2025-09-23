@@ -6,7 +6,7 @@ const analyticsStyles = `
 
 body {
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #6a0dad, #9d4edd);
+  background: linear-gradient(135deg, #6a0dad, #9d4edd); /* Updated to match other pages */
   color: #333333;
   line-height: 1.6;
 }
@@ -37,7 +37,7 @@ body {
 .analytics-header h2 {
   font-size: 2rem;
   font-weight: 700;
-  color: #6a0dad;
+  color: #6a0dad; /* Updated to match the primary color */
 }
 
 .analytics-controls {
@@ -69,12 +69,12 @@ body {
 
 .btn-outline {
   background: transparent;
-  border-color: #6a0dad;
-  color: #6a0dad;
+  border-color: #6a0dad; /* Updated to match the primary color */
+  color: #6a0dad; /* Updated to match the primary color */
 }
 
 .btn-outline:hover {
-  background: #6a0dad;
+  background: #6a0dad; /* Updated to match the primary color */
   color: white;
 }
 
@@ -96,7 +96,7 @@ body {
 .metric-card h3, .chart-card h3 {
   font-size: 1.25rem;
   font-weight: 600;
-  color: #6a0dad;
+  color: #6a0dad; /* Updated to match the primary color */
   margin-bottom: 0.5rem;
 }
 
