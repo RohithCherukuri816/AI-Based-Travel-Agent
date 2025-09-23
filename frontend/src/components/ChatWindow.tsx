@@ -3,7 +3,8 @@ import React, { useEffect, useRef } from 'react';
 interface Message {
   id: string;
   sender: 'user' | 'ai';
-  content: string | React.ReactElement;
+  content: string | React.ReactElement; // Allow content to be a string or a React.ReactElement
+  // Optional fields for structured content
   itinerary?: any;
   costBreakdown?: any;
   bookingConfirmation?: any;

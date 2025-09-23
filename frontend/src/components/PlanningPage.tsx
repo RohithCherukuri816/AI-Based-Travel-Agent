@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import ChatWindow from './ChatWindow';
 import MessageInput from './MessageInput';
@@ -38,7 +38,6 @@ const PlanningPage: React.FC = () => {
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<Location | undefined>(undefined);
   const [showFeedbackForm, setShowFeedbackForm] = useState<boolean>(false);
-  const chatWindowRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     // Generate a unique user ID for this session
@@ -126,7 +125,7 @@ const PlanningPage: React.FC = () => {
         const aiResponseContent = data.response.content;
         let parsedContent: any = {};
         try {
-          if (typeof aiResponseContent === 'string' && (aiResponseContent.includes('"Itinerary"') || aiResponseContent.includes('"Cost Breakdown"') || aiResponseContent.includes('"Booking Confirmation"'))) {
+          if (typeof aiResponseContent === 'string' && (aiResponseContent.includes('"Itinerary"') || aiResponseContent.includes('"Cost Breakdown"'))) {
             const jsonMatch = aiResponseContent.match(/```json\n([\s\S]*?)\n```/);
             if (jsonMatch && jsonMatch[1]) {
               parsedContent = JSON.parse(jsonMatch[1]);
@@ -135,7 +134,7 @@ const PlanningPage: React.FC = () => {
             }
           }
         } catch (e) {
-          console.error("Error parsing AI response content as JSON:", e);
+          console.error("Error parsing message content as JSON:", e);
         }
 
         const aiMessage: Message = {
@@ -204,42 +203,51 @@ const PlanningPage: React.FC = () => {
   };
 
   return (
-    <div className="chat-page-content">
-      <div className="chat-container">
-        <ChatWindow messages={messages.map(msg => {
-          let parsedContent: any = {};
-          try {
-            if (typeof msg.content === 'string' && (msg.content.includes('"Itinerary"') || msg.content.includes('"Cost Breakdown"'))) {
-              const jsonMatch = msg.content.match(/```json\n([\s\S]*?)\n```/);
-              if (jsonMatch && jsonMatch[1]) {
-                parsedContent = JSON.parse(jsonMatch[1]);
-              } else {
-                parsedContent = JSON.parse(msg.content);
+    <div className="flex flex-col h-screen overflow-hidden">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col items-center justify-start">
+        {messages.length === 1 && (
+          <div className="w-full max-w-2xl bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+            <h2 className="text-2xl font-bold mb-4 text-center">Plan Your Trip!</h2>
+            <TravelForm onSubmitPreferences={handleSubmitPreferences} />
+          </div>
+        )}
+        {messages.length > 1 && (
+          <div className="chat-container">
+            <ChatWindow messages={messages.map(msg => {
+              let parsedContent: any = {};
+              try {
+                if (typeof msg.content === 'string' && (msg.content.includes('"Itinerary"') || msg.content.includes('"Cost Breakdown"'))) {
+                  const jsonMatch = msg.content.match(/```json\n([\s\S]*?)\n```/);
+                  if (jsonMatch && jsonMatch[1]) {
+                    parsedContent = JSON.parse(jsonMatch[1]);
+                  } else {
+                    parsedContent = JSON.parse(msg.content);
+                  }
+                }
+              } catch (e) {
+                console.error("Error parsing message content as JSON:", e);
               }
-            }
-          } catch (e) {
-            console.error("Error parsing message content as JSON:", e);
-          }
 
-          const itinerary = parsedContent.Itinerary || msg.itinerary;
-          const costBreakdown = parsedContent['Cost Breakdown'] || parsedContent.CostBreakdown || msg.costBreakdown;
-          const bookingConfirmation = parsedContent['Booking Confirmation'] || parsedContent.BookingConfirmation || msg.bookingConfirmation;
-          const generalContent = parsedContent["General Content"] || msg.content;
+              const itinerary = parsedContent.Itinerary || msg.itinerary;
+              const costBreakdown = parsedContent['Cost Breakdown'] || parsedContent.CostBreakdown || msg.costBreakdown;
+              const bookingConfirmation = parsedContent['Booking Confirmation'] || parsedContent.BookingConfirmation || msg.bookingConfirmation;
+              const generalContent = parsedContent["General Content"] || msg.content;
 
-          return {
-            ...msg,
-            itinerary: itinerary,
-            costBreakdown: costBreakdown,
-            bookingConfirmation: bookingConfirmation,
-            content: itinerary ? <ItineraryDisplay itinerary={itinerary} /> :
-                     costBreakdown ? <CostBreakdownDisplay costBreakdown={costBreakdown} /> :
-                     bookingConfirmation ? <BookingConfirmationDisplay confirmation={bookingConfirmation} /> :
-                     generalContent
-          };
-        })} />
-        <MessageInput onSendMessage={handleSendMessage} />
+              return {
+                ...msg,
+                itinerary: itinerary,
+                costBreakdown: costBreakdown,
+                bookingConfirmation: bookingConfirmation,
+                content: itinerary ? <ItineraryDisplay itinerary={itinerary} /> :
+                          costBreakdown ? <CostBreakdownDisplay costBreakdown={costBreakdown} /> :
+                          bookingConfirmation ? <BookingConfirmationDisplay confirmation={bookingConfirmation} /> :
+                          generalContent
+              };
+            })} />
+            <MessageInput onSendMessage={handleSendMessage} />
+          </div>
+        )}
       </div>
-      <TravelForm onSubmitPreferences={handleSubmitPreferences} />
 
       {currentTripId && !showFeedbackForm && (
         <button className="show-feedback-button" onClick={() => setShowFeedbackForm(true)}>
@@ -248,7 +256,10 @@ const PlanningPage: React.FC = () => {
       )}
 
       {showFeedbackForm && currentTripId && (
-        <FeedbackForm onSubmitFeedback={handleSubmitFeedback} tripId={currentTripId} />
+        <div className="w-full max-w-2xl bg-white p-6 rounded-xl shadow-lg border border-gray-200 mt-4">
+          <h2 className="text-2xl font-bold mb-4 text-center">Provide Trip Feedback</h2>
+          <FeedbackForm onSubmitFeedback={handleSubmitFeedback} tripId={currentTripId} />
+        </div>
       )}
     </div>
   );

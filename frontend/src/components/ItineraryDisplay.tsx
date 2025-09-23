@@ -7,6 +7,7 @@ interface Activity {
   backup_option?: string;
 }
 
+
 interface DayPlan {
   day: number;
   date: string;
