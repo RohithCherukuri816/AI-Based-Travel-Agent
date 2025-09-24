@@ -324,13 +324,6 @@ const navbarStyles = `
   border-radius: 2px;
 }
 
-.nav-link:hover .nav-indicator {
-  width: 100%;
-}
-
-.nav-link.active .nav-indicator {
-  width: 100%;
-}
 `;
 
 const Navbar: React.FC = () => {
