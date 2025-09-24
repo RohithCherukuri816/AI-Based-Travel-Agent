@@ -1,194 +1,437 @@
-import React from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 
 const heroStyles = `
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
+
+:root {
+  --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+  --dark-bg: #0f0f23;
+  --card-bg: rgba(255, 255, 255, 0.05);
+  --text-primary: #ffffff;
+  --text-secondary: #b0b0b0;
+  --glow-color: rgba(102, 126, 234, 0.6);
+}
 
 body {
   font-family: 'Inter', sans-serif;
-  background: linear-gradient(135deg, #6a0dad, #9d4edd);
-  color: #333333;
-  line-height: 1.6;
+  background: var(--dark-bg);
+  color: var(--text-primary);
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
 }
 
 .hero-page-container {
+  min-height: 100vh;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.05) 0%, transparent 50%);
+  position: relative;
   display: flex;
-  justify-content: center;
   align-items: center;
-  min-height: calc(100vh - 80px); /* Adjust for navbar height */
+  justify-content: center;
   padding: 2rem;
+}
+
+/* Animated background elements */
+.hero-background-elements {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
-  max-width: 1200px;
-  margin: 0 auto;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}
+
+.hero-shape-1 { width: 300px; height: 300px; top: 10%; left: 5%; animation-delay: 0s; }
+.hero-shape-2 { width: 200px; height: 200px; top: 60%; right: 10%; animation-delay: 2s; }
+.hero-shape-3 { width: 150px; height: 150px; bottom: 20%; left: 15%; animation-delay: 4s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-30px) rotate(180deg); }
 }
 
 .hero-section {
+  position: relative;
+  z-index: 2;
+  max-width: 1200px;
   width: 100%;
-  display: flex;
-  justify-content: center;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4rem;
   align-items: center;
-  background: #ffffff;
-  border-radius: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-  padding: 4rem;
 }
 
 .hero-content {
-  flex: 1;
-  text-align: left;
-  padding-right: 2rem;
+  animation: slideInLeft 1s ease-out;
+}
+
+.hero-glow {
+  position: absolute;
+  top: 50%;
+  left: 30%;
+  transform: translate(-50%, -50%);
+  width: 500px;
+  height: 500px;
+  background: var(--primary-gradient);
+  border-radius: 50%;
+  filter: blur(100px);
+  opacity: 0.2;
+  z-index: -1;
 }
 
 .hero-title {
-  font-family: 'Poppins', sans-serif;
-  font-size: 3rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin-bottom: 1rem;
-  color: #333;
-}
-
-.gradient-text {
-  background: linear-gradient(to right, #6a0dad, #9d4edd);
+  font-size: 4rem;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+  background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  display: inline-block;
+  animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.hero-title-main {
+  display: block;
+  font-size: 3.5rem;
+}
+
+.hero-title-ai {
+  display: block;
+  font-size: 5rem;
+  background: var(--secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  position: relative;
 }
 
 .hero-subtitle {
-  font-size: 1.1rem;
-  color: #555;
-  margin-bottom: 2rem;
-  max-width: 600px;
+  font-size: 1.3rem;
+  color: var(--text-secondary);
+  margin-bottom: 2.5rem;
+  line-height: 1.6;
+  animation: fadeInUp 0.8s ease 0.4s both;
 }
 
 .hero-actions {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  animation: fadeInUp 0.8s ease 0.6s both;
 }
 
-.btn {
-  padding: 0.75rem 2rem;
-  border-radius: 9999px;
+.hero-btn {
+  padding: 1.2rem 2.5rem;
+  border-radius: 50px;
   font-weight: 600;
-  cursor: pointer;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
   border: 2px solid transparent;
-  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
 }
 
-.btn-primary {
-  background: #6a0dad;
+.hero-btn-primary {
+  background: var(--primary-gradient);
   color: white;
 }
 
-.btn-primary:hover {
-  background: #9d4edd;
+.hero-btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
 }
 
-.btn-outline {
+.hero-btn-primary:hover::before {
+  left: 100%;
+}
+
+.hero-btn-primary:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
+}
+
+.hero-btn-outline {
   background: transparent;
-  border-color: #6a0dad;
-  color: #6a0dad;
+  border-color: rgba(102, 126, 234, 0.5);
+  color: var(--text-primary);
+  backdrop-filter: blur(10px);
 }
 
-.btn-outline:hover {
-  background: #6a0dad;
-  color: white;
+.hero-btn-outline:hover {
+  background: rgba(102, 126, 234, 0.1);
+  border-color: rgba(102, 126, 234, 0.8);
+  transform: translateY(-3px);
 }
 
 .hero-stats {
   display: flex;
-  gap: 2rem;
+  gap: 3rem;
+  animation: fadeInUp 0.8s ease 0.8s both;
 }
 
-.stat-item {
+.hero-stat-item {
   text-align: center;
 }
 
-.stat-number {
+.hero-stat-number {
   font-size: 2.5rem;
   font-weight: 700;
-  color: #6a0dad;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 0.5rem;
 }
 
-.stat-label {
+.hero-stat-label {
   font-size: 0.9rem;
-  color: #888;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 1px;
+  font-weight: 600;
 }
 
+/* Hero Visual Section */
 .hero-visual {
-  flex: 1;
-  display: flex;
-  justify-content: center;
-  align-items: center;
   position: relative;
-  min-height: 400px;
+  animation: slideInRight 1s ease-out;
 }
 
-.floating-card {
+.hero-visual-container {
+  position: relative;
+  height: 500px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.hero-main-card {
   position: absolute;
-  background: #f8fafc;
-  border-radius: 1.5rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-  padding: 1.5rem;
+  width: 300px;
+  height: 200px;
+  background: var(--card-bg);
+  border-radius: 20px;
+  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  color: #333;
-  transition: transform 0.3s, box-shadow 0.3s;
+  gap: 1rem;
+  animation: floatCard 4s ease-in-out infinite;
 }
 
-.floating-card i {
+.hero-main-card i {
+  font-size: 3rem;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.hero-main-card span {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.hero-floating-card {
+  position: absolute;
+  background: var(--card-bg);
+  border-radius: 15px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.8rem;
+  width: 140px;
+  height: 140px;
+  animation: float 6s ease-in-out infinite;
+}
+
+.hero-floating-card i {
   font-size: 2rem;
-  color: #6a0dad;
+  background: var(--secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-.floating-card span {
+.hero-floating-card span {
   font-weight: 600;
   font-size: 0.9rem;
+  text-align: center;
 }
 
-.card-1 {
+.hero-card-1 {
   top: 10%;
   left: 10%;
-  transform: rotate(-10deg);
+  animation-delay: 0s;
 }
 
-.card-2 {
-  top: 30%;
+.hero-card-2 {
+  top: 60%;
   right: 15%;
-  transform: rotate(15deg);
+  animation-delay: 2s;
 }
 
-.card-3 {
-  bottom: 10%;
+.hero-card-3 {
+  bottom: 20%;
   left: 20%;
-  transform: rotate(-5deg);
+  animation-delay: 4s;
+}
+
+@keyframes floatCard {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(5deg); }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .hero-section {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+    text-align: center;
+  }
+  
+  .hero-title-main {
+    font-size: 3rem;
+  }
+  
+  .hero-title-ai {
+    font-size: 4rem;
+  }
+  
+  .hero-visual-container {
+    height: 400px;
+  }
 }
 
 @media (max-width: 768px) {
-  .hero-section {
-    flex-direction: column;
-    text-align: center;
-    padding: 2rem;
+  .hero-page-container {
+    padding: 1rem;
   }
-
-  .hero-content {
-    padding-right: 0;
+  
+  .hero-title {
+    font-size: 3rem;
   }
-
+  
+  .hero-title-main {
+    font-size: 2.5rem;
+  }
+  
+  .hero-title-ai {
+    font-size: 3rem;
+  }
+  
   .hero-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .hero-btn {
+    width: 100%;
+    max-width: 300px;
     justify-content: center;
   }
+  
+  .hero-stats {
+    justify-content: center;
+    gap: 2rem;
+  }
+  
+  .hero-visual-container {
+    height: 300px;
+  }
+  
+  .hero-main-card {
+    width: 250px;
+    height: 180px;
+  }
+}
 
-  .hero-visual {
-    display: none;
+@media (max-width: 480px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+  
+  .hero-title-main {
+    font-size: 2rem;
+  }
+  
+  .hero-title-ai {
+    font-size: 2.5rem;
+  }
+  
+  .hero-subtitle {
+    font-size: 1.1rem;
+  }
+  
+  .hero-stats {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+  
+  .hero-stat-number {
+    font-size: 2rem;
   }
 }
 `;
@@ -198,52 +441,75 @@ const HeroSection: React.FC = () => {
     <>
       <style>{heroStyles}</style>
       <div className="hero-page-container">
+        {/* Animated Background */}
+        <div className="hero-background-elements">
+          <div className="hero-floating-shape hero-shape-1"></div>
+          <div className="hero-floating-shape hero-shape-2"></div>
+          <div className="hero-floating-shape hero-shape-3"></div>
+        </div>
+
         <section id="home" className="hero-section">
           <div className="hero-content">
+            <div className="hero-glow"></div>
+            
             <h1 className="hero-title">
-              <span style={{ color: "#000" }}>Plan Your Dream Trip with </span>
-              <span className="gradient-text">AI Intelligence</span>
+              <span className="hero-title-main">Plan Your Dream Trip with</span>
+              <span className="hero-title-ai">AI Intelligence</span>
             </h1>
+            
             <p className="hero-subtitle">
-              Experience the future of travel planning with our advanced AI agents. Get personalized itineraries, real-time pricing, and intelligent recommendations in seconds.
+              Experience the future of travel planning with our advanced AI agents. 
+              Get personalized itineraries, real-time pricing, and intelligent recommendations in seconds.
             </p>
+            
             <div className="hero-actions">
-  <Link to="/planning" className="btn btn-primary">
-    <i className="fas fa-magic"></i>
-    Start Planning
-  </Link>
-  <button className="btn btn-outline">
-    <i className="fas fa-play"></i>
-    Watch Demo
-  </button>
-</div>
+              <Link to="/planning" className="hero-btn hero-btn-primary">
+                <i className="fas fa-magic"></i>
+                Start Planning
+              </Link>
+              <button className="hero-btn hero-btn-outline">
+                <i className="fas fa-play"></i>
+                Watch Demo
+              </button>
+            </div>
+            
             <div className="hero-stats">
-              <div className="stat-item">
-                <div className="stat-number">10K+</div>
-                <div className="stat-label">Trips Planned</div>
+              <div className="hero-stat-item">
+                <div className="hero-stat-number">10K+</div>
+                <div className="hero-stat-label">Trips Planned</div>
               </div>
-              <div className="stat-item">
-                <div className="stat-number">98%</div>
-                <div className="stat-label">Satisfaction</div>
+              <div className="hero-stat-item">
+                <div className="hero-stat-number">98%</div>
+                <div className="hero-stat-label">Satisfaction</div>
               </div>
-              <div className="stat-item">
-                <div className="stat-number">24/7</div>
-                <div className="stat-label">AI Support</div>
+              <div className="hero-stat-item">
+                <div className="hero-stat-number">24/7</div>
+                <div className="hero-stat-label">AI Support</div>
               </div>
             </div>
           </div>
+
           <div className="hero-visual">
-            <div className="floating-card card-1">
-              <i className="fas fa-map-marked-alt"></i>
-              <span>Smart Routing</span>
-            </div>
-            <div className="floating-card card-2">
-              <i className="fas fa-star"></i>
-              <span>AI Recommendations</span>
-            </div>
-            <div className="floating-card card-3">
-              <i className="fas fa-clock"></i>
-              <span>Real-time Updates</span>
+            <div className="hero-visual-container">
+              <div className="hero-main-card">
+                <i className="fas fa-robot"></i>
+                <span>AI Travel Assistant</span>
+              </div>
+              
+              <div className="hero-floating-card hero-card-1">
+                <i className="fas fa-map-marked-alt"></i>
+                <span>Smart Routing</span>
+              </div>
+              
+              <div className="hero-floating-card hero-card-2">
+                <i className="fas fa-star"></i>
+                <span>AI Recommendations</span>
+              </div>
+              
+              <div className="hero-floating-card hero-card-3">
+                <i className="fas fa-clock"></i>
+                <span>Real-time Updates</span>
+              </div>
             </div>
           </div>
         </section>

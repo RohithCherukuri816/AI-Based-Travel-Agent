@@ -16,6 +16,7 @@ const sampleCostBreakdown = {
     activities: 350,
     insurance: 100,
     taxes_fees: 150,
+    
   },
   total_estimated_cost: 3000,
 };

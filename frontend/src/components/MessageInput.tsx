@@ -4,7 +4,6 @@ interface MessageInputProps {
   onSendMessage: (message: string) => void;
 }
 
-
 const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
@@ -17,7 +16,6 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
       recognitionRef.current.continuous = false; // Stop after a single utterance
       recognitionRef.current.interimResults = false; // Only return final results
       recognitionRef.current.lang = 'en-US';
-
       recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
         const transcript = event.results[0][0].transcript;
         setInput(transcript);
