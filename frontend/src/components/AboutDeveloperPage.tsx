@@ -463,25 +463,48 @@ const DeveloperPortfolioPage: React.FC = () => {
   const projects = [
     {
       id: 1,
-      title: "AI Travel Agent",
+      title: "AI Voice customer support",
       description: "Revolutionary travel planning platform with multi-agent AI system, real-time analytics, and intelligent itinerary generation.",
       tech: ["React", "TypeScript", "Node.js", "Python", "AI/ML"],
       icon: "fas fa-plane-departure"
     },
     {
       id: 2,
-      title: "Blockchain Marketplace",
+      title: "AI Powered Lead Qualification Bot",
       description: "Decentralized e-commerce platform with smart contracts, cryptocurrency payments, and NFT integration.",
       tech: ["Solidity", "Web3.js", "React", "Ethereum"],
       icon: "fas fa-cube"
     },
     {
       id: 3,
-      title: "Health Analytics Dashboard",
+      title: "AI Customer Ticket Resolution Bot",
+      description: "Real-time health monitoring system with predictive analytics and IoT device integration.",
+      tech: ["Vue.js", "Python", "TensorFlow", "IoT"],
+      icon: "fas fa-heartbeat"
+    },
+    {
+      id: 4,
+      title: "Finetuned Gemma LLM Chatbot",
+      description: "Real-time health monitoring system with predictive analytics and IoT device integration.",
+      tech: ["Vue.js", "Python", "TensorFlow", "IoT"],
+      icon: "fas fa-heartbeat"
+    },
+    {
+      id: 5,
+      title: "Website content automation using n8n",
+      description: "Real-time health monitoring system with predictive analytics and IoT device integration.",
+      tech: ["Vue.js", "Python", "TensorFlow", "IoT"],
+      icon: "fas fa-heartbeat"
+    },
+    {
+      id: 3,
+      title: "AI Customer Ticket Resolution Bot",
       description: "Real-time health monitoring system with predictive analytics and IoT device integration.",
       tech: ["Vue.js", "Python", "TensorFlow", "IoT"],
       icon: "fas fa-heartbeat"
     }
+
+
   ];
 
   const skills = {
@@ -554,7 +577,7 @@ const DeveloperPortfolioPage: React.FC = () => {
           </section>
 
           {/* Skills Section */}
-          <section 
+          {/* <section 
             id="skills" 
             ref={el => sectionRefs.current.skills = el as HTMLDivElement | null}
             className={`section fade-in ${visibleSections.has('skills') ? 'visible' : ''}`}
@@ -572,7 +595,7 @@ const DeveloperPortfolioPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </section>
+          </section> */}
 
           {/* Contact Section */}
           <section 
