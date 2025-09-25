@@ -463,7 +463,7 @@ const HeroSection: React.FC = () => {
             </p>
             
             <div className="hero-actions">
-              <Link to="/planning" className="hero-btn hero-btn-primary">
+              <Link to="/planning-landing" className="hero-btn hero-btn-primary">
                 <i className="fas fa-magic"></i>
                 Start Planning
               </Link>

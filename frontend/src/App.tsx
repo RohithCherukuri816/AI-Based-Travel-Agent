@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-route
 
 // Import all components from the components directory
 import Navbar from './components/Navbar';
+import PlanningLandingPage from './components/PlanningLandingPage';
 import PlanningNavbar from './components/PlanningNavbar';
 import HeroSection from './components/HeroSection';
 import FeaturesSection from './components/FeaturesSection';
@@ -13,6 +14,7 @@ import PlanningPage from './components/PlanningPage';
 import Footer from './components/Footer';
 import AboutDeveloperPage from './components/AboutDeveloperPage';
 import BudgetCalculatorPage from './components/BudgetCalculatorPage';
+
 
 import './App.css';
 
@@ -39,6 +41,7 @@ const AppContent = () => {
           <Route path="/planning" element={<PlanningPage />} />
           <Route path="/chat" element={<ChatPage />} />
           <Route path="/budget-calculator" element={<BudgetCalculatorPage />} />
+          <Route path="/planning-landing" element={<PlanningLandingPage />} />
         </Routes>
       </main>
 
