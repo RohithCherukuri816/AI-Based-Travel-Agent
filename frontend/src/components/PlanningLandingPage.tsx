@@ -25,7 +25,7 @@ const landingStyles = `
 }
 
 .landing-content {
-  max-width: 1200px;
+  max-width: 800px;
   width: 100%;
   text-align: center;
 }
@@ -48,7 +48,7 @@ const landingStyles = `
 
 .features-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 2rem;
   margin-bottom: 3rem;
 }
@@ -59,11 +59,6 @@ const landingStyles = `
   border-radius: 1rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
-  transition: transform 0.3s ease;
-}
-
-.feature-card:hover {
-  transform: translateY(-5px);
 }
 
 .feature-icon {
@@ -97,46 +92,39 @@ const landingStyles = `
   color: var(--text-primary);
 }
 
-.start-buttons {
-  display: flex;
-  gap: 1.5rem;
-  justify-content: center;
-  flex-wrap: wrap;
-}
-
-.landing-btn {
-  padding: 1.2rem 2.5rem;
+.start-planning-btn {
+  padding: 1.2rem 3rem;
   border-radius: 50px;
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1.3rem;
   text-decoration: none;
   transition: all 0.3s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1rem;
   border: 2px solid transparent;
-}
-
-.landing-btn-primary {
   background: var(--primary-gradient);
   color: white;
 }
 
-.landing-btn-primary:hover {
+.start-planning-btn:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
 }
 
-.landing-btn-outline {
-  background: transparent;
-  border-color: rgba(102, 126, 234, 0.5);
-  color: var(--text-primary);
+.back-to-home {
+  margin-top: 2rem;
 }
 
-.landing-btn-outline:hover {
-  background: rgba(102, 126, 234, 0.1);
-  border-color: rgba(102, 126, 234, 0.8);
-  transform: translateY(-3px);
+.back-link {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-size: 1rem;
+  transition: color 0.3s ease;
+}
+
+.back-link:hover {
+  color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
@@ -144,15 +132,13 @@ const landingStyles = `
     font-size: 2.5rem;
   }
   
-  .start-buttons {
-    flex-direction: column;
-    align-items: center;
+  .features-grid {
+    grid-template-columns: 1fr;
   }
   
-  .landing-btn {
-    width: 100%;
-    max-width: 300px;
-    justify-content: center;
+  .start-planning-btn {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
   }
 }
 `;
@@ -163,54 +149,47 @@ const PlanningLandingPage: React.FC = () => {
       <style>{landingStyles}</style>
       <div className="landing-page-container">
         <div className="landing-content">
-          <h1 className="landing-title">Start Your AI-Powered Journey</h1>
+          <h1 className="landing-title">AI Travel Planning</h1>
           <p className="landing-subtitle">
-            Choose how you'd like to plan your perfect trip with our intelligent travel assistant
+            Let our intelligent AI assistant create the perfect travel itinerary tailored just for you
           </p>
           
           <div className="features-grid">
             <div className="feature-card">
               <i className="fas fa-robot feature-icon"></i>
-              <h3 className="feature-title">AI Trip Planning</h3>
+              <h3 className="feature-title">Smart Itineraries</h3>
               <p className="feature-description">
-                Get personalized itineraries crafted by our AI based on your preferences, 
-                budget, and travel style.
+                AI-powered travel plans based on your preferences, budget, and interests
               </p>
             </div>
             
             <div className="feature-card">
-              <i className="fas fa-comments feature-icon"></i>
-              <h3 className="feature-title">Chat with AI Assistant</h3>
+              <i className="fas fa-map-marked-alt feature-icon"></i>
+              <h3 className="feature-title">Personalized Routes</h3>
               <p className="feature-description">
-                Have a conversation with our AI travel expert to get recommendations 
-                and answers to all your travel questions.
+                Optimized daily schedules and transportation recommendations
               </p>
             </div>
             
             <div className="feature-card">
-              <i className="fas fa-calculator feature-icon"></i>
-              <h3 className="feature-title">Budget Calculator</h3>
+              <i className="fas fa-dollar-sign feature-icon"></i>
+              <h3 className="feature-title">Budget Planning</h3>
               <p className="feature-description">
-                Plan your expenses with our smart budget calculator that estimates costs 
-                for your entire trip.
+                Detailed cost breakdowns and money-saving suggestions
               </p>
             </div>
           </div>
           
           <div className="get-started-section">
-            <h2 className="get-started-title">Ready to Get Started?</h2>
-            <div className="start-buttons">
-              <Link to="/planning" className="landing-btn landing-btn-primary">
-                <i className="fas fa-magic"></i>
-                Start AI Planning
-              </Link>
-              <Link to="/chat" className="landing-btn landing-btn-outline">
-                <i className="fas fa-comments"></i>
-                Chat with AI Assistant
-              </Link>
-              <Link to="/budget-calculator" className="landing-btn landing-btn-outline">
-                <i className="fas fa-calculator"></i>
-                Use Budget Calculator
+            <h2 className="get-started-title">Ready to Plan Your Trip?</h2>
+            <Link to="/planning" className="start-planning-btn">
+              <i className="fas fa-magic"></i>
+              Start AI Planning
+            </Link>
+            
+            <div className="back-to-home">
+              <Link to="/" className="back-link">
+                <i className="fas fa-arrow-left"></i> Back to Home
               </Link>
             </div>
           </div>

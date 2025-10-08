@@ -1,35 +1,37 @@
 import React, { useState } from 'react';
 
-// Combined styles for a single file solution
+// Updated dark theme styles
 const formStyles = `
-  @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
   
   :root {
-    --primary-color: #6a0dad;
-    --primary-light: #9d4edd;
-    --background-color: #f5f5f5;
-    --card-bg: #ffffff;
-    --text-color: #333333;
-    --border-color: #e0e0e0;
-    --shadow-color: rgba(0, 0, 0, 0.05);
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    --dark-bg: #0f0f23;
+    --card-bg: rgba(255, 255, 255, 0.03);
+    --text-primary: #ffffff;
+    --text-secondary: #b0b0b0;
+    --border-color: rgba(255, 255, 255, 0.1);
   }
 
   .travel-form-container {
     width: 100%;
-    max-width: 900px; /* Constrain max width for aesthetics on very large screens */
+    max-width: 900px;
     margin: 2rem auto;
-    background: var(--background-color);
-    font-family: 'Poppins', sans-serif;
-    color: var(--text-color);
-    padding: 3rem;
-    border-radius: 1.5rem;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+    background: transparent;
+    font-family: 'Inter', sans-serif;
+    color: var(--text-primary);
+    padding: 0;
   }
 
   .form-title {
     font-size: 2.5rem;
     font-weight: 700;
-    color: var(--primary-color);
+    background: var(--primary-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
     text-align: center;
     margin-bottom: 2.5rem;
     position: relative;
@@ -42,7 +44,7 @@ const formStyles = `
     transform: translateX(-50%);
     width: 60px;
     height: 4px;
-    background: var(--primary-light);
+    background: var(--primary-gradient);
     border-radius: 2px;
   }
 
@@ -55,22 +57,28 @@ const formStyles = `
     font-size: 1.25rem;
     font-weight: 600;
     margin-bottom: 1rem;
-    color: var(--primary-color);
+    color: var(--text-primary);
   }
 
   .form-input {
     width: 100%;
     padding: 0.75rem 1.25rem;
-    border: 2px solid var(--border-color);
+    border: 1px solid var(--border-color);
     border-radius: 0.75rem;
     font-size: 1rem;
     background: var(--card-bg);
+    color: var(--text-primary);
     transition: all 0.3s ease-in-out;
+    backdrop-filter: blur(10px);
   }
   .form-input:focus {
     outline: none;
-    border-color: var(--primary-light);
-    box-shadow: 0 0 0 4px rgba(106, 13, 173, 0.1);
+    border-color: rgba(102, 126, 234, 0.5);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  }
+
+  .form-input::placeholder {
+    color: var(--text-secondary);
   }
 
   .card-grid {
@@ -87,37 +95,39 @@ const formStyles = `
     padding: 1.5rem 1rem;
     background: var(--card-bg);
     border-radius: 1rem;
-    box-shadow: 0 4px 12px var(--shadow-color);
-    border: 2px solid var(--border-color);
+    border: 1px solid var(--border-color);
     cursor: pointer;
     transition: all 0.3s ease-in-out;
     text-align: center;
+    backdrop-filter: blur(10px);
   }
   .card-item:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-    border-color: var(--primary-light);
+    transform: translateY(-5px);
+    border-color: rgba(102, 126, 234, 0.3);
+    background: rgba(102, 126, 234, 0.05);
   }
   .card-item.selected {
-    border-color: var(--primary-color);
-    background: linear-gradient(145deg, var(--primary-color), var(--primary-light));
-    color: #fff;
-    transform: scale(1.05);
-    box-shadow: 0 12px 25px rgba(0, 0, 0, 0.2);
+    border-color: rgba(102, 126, 234, 0.5);
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1));
+    transform: scale(1.02);
   }
 
   .card-icon {
     font-size: 2.5rem;
     margin-bottom: 0.75rem;
-    color: var(--primary-color);
-    transition: color 0.3s ease-in-out;
+    background: var(--accent-gradient);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    transition: all 0.3s ease-in-out;
   }
   .card-item.selected .card-icon {
     color: #fff;
+    -webkit-text-fill-color: #fff;
   }
 
   .card-label {
     font-weight: 500;
+    color: var(--text-primary);
   }
 
   .selected-check {
@@ -125,7 +135,7 @@ const formStyles = `
     top: 0.75rem;
     right: 0.75rem;
     font-size: 1.5rem;
-    color: #fff;
+    color: #4CAF50;
   }
 
   .special-needs-input-group {
@@ -135,14 +145,17 @@ const formStyles = `
 
   .add-button {
     padding: 0.75rem 1.5rem;
-    background: var(--primary-color);
+    background: var(--primary-gradient);
     color: #fff;
+    border: none;
     border-radius: 0.75rem;
     font-weight: 600;
-    transition: background-color 0.3s;
+    cursor: pointer;
+    transition: transform 0.3s;
+    white-space: nowrap;
   }
   .add-button:hover {
-    background: var(--primary-light);
+    transform: translateY(-2px);
   }
 
   .special-needs-list {
@@ -155,8 +168,8 @@ const formStyles = `
   }
 
   .special-need-tag {
-    background: var(--primary-light);
-    color: #fff;
+    background: rgba(79, 172, 254, 0.1);
+    color: var(--text-primary);
     padding: 0.5rem 1rem;
     border-radius: 1.5rem;
     display: flex;
@@ -164,15 +177,18 @@ const formStyles = `
     gap: 0.5rem;
     font-size: 0.9rem;
     font-weight: 500;
+    border: 1px solid rgba(79, 172, 254, 0.3);
   }
   .special-need-tag-remove {
     background: transparent;
-    color: #fff;
+    color: var(--text-primary);
     font-weight: bold;
     font-size: 1.25rem;
     line-height: 1;
     opacity: 0.8;
     transition: opacity 0.3s;
+    border: none;
+    cursor: pointer;
   }
   .special-need-tag-remove:hover {
     opacity: 1;
@@ -180,18 +196,52 @@ const formStyles = `
 
   .submit-button {
     width: 100%;
-    padding: 1rem;
+    padding: 1.2rem;
     border-radius: 1rem;
-    background: linear-gradient(to right, var(--primary-color), var(--primary-light));
+    background: var(--primary-gradient);
     color: #fff;
     font-size: 1.25rem;
     font-weight: 700;
-    box-shadow: 0 4px 20px rgba(106, 13, 173, 0.4);
-    transition: transform 0.3s, box-shadow 0.3s;
+    border: none;
+    cursor: pointer;
+    transition: transform 0.3s;
+    margin-top: 2rem;
   }
   .submit-button:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 8px 25px rgba(106, 13, 173, 0.6);
+    transform: translateY(-3px);
+  }
+
+  .dates-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+
+  @media (max-width: 768px) {
+    .travel-form-container {
+      margin: 1rem auto;
+      padding: 0;
+    }
+    
+    .form-title {
+      font-size: 2rem;
+    }
+    
+    .card-grid {
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    }
+    
+    .dates-container {
+      grid-template-columns: 1fr;
+    }
+    
+    .special-needs-input-group {
+      flex-direction: column;
+    }
+    
+    .add-button {
+      width: 100%;
+    }
   }
 `;
 
@@ -362,7 +412,7 @@ const TravelForm: React.FC<TravelFormProps> = ({ onSubmitPreferences }) => {
 
           <div className="form-section">
             <label className="form-label">Dates</label>
-            <div className="flex space-x-4">
+            <div className="dates-container">
               <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="form-input" />
               <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required className="form-input" />
             </div>
@@ -440,7 +490,9 @@ const TravelForm: React.FC<TravelFormProps> = ({ onSubmitPreferences }) => {
             </ul>
           </div>
 
-          <button type="submit" className="submit-button">Plan My Trip!</button>
+          <button type="submit" className="submit-button">
+            <i className="fas fa-magic"></i> Plan My Trip!
+          </button>
         </form>
       </div>
     </>
