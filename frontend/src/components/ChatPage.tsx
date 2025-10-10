@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
 import apiService from '../services/api';
 
-// Enhanced CSS with animations and effects matching other pages
+// Ultra-Enhanced CSS with amazing animations and effects
 const enhancedChatStyles = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
@@ -12,6 +12,7 @@ const enhancedChatStyles = `
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   
   --dark-bg: #0f0f23;
   --card-bg: rgba(255, 255, 255, 0.08);
@@ -41,18 +42,18 @@ body {
 
 .enhanced-chat-container {
   min-height: 100vh;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.05) 0%, transparent 50%);
+  background: var(--dark-bg);
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 60% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
   position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+  overflow: hidden;
+  backdrop-filter: blur(1px);
 }
 
-/* Animated Background Elements */
+/* Ultra-Advanced Background Elements */
 .chat-background-elements {
   position: fixed;
   top: 0;
@@ -68,60 +69,150 @@ body {
   border-radius: 50%;
   background: var(--primary-gradient);
   opacity: 0.1;
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
 }
 
-.chat-shape-1 { width: 200px; height: 200px; top: 10%; left: 5%; animation-delay: 0s; }
-.chat-shape-2 { width: 150px; height: 150px; top: 60%; right: 10%; animation-delay: 2s; }
-.chat-shape-3 { width: 100px; height: 100px; bottom: 20%; left: 15%; animation-delay: 4s; }
+.chat-shape-1 { 
+  width: 300px; 
+  height: 300px; 
+  top: 5%; 
+  left: 3%; 
+  animation-delay: 0s; 
+  background: var(--primary-gradient);
+}
+
+.chat-shape-2 { 
+  width: 200px; 
+  height: 200px; 
+  top: 65%; 
+  right: 8%; 
+  animation-delay: 3s; 
+  background: var(--secondary-gradient);
+}
+
+.chat-shape-3 { 
+  width: 150px; 
+  height: 150px; 
+  bottom: 15%; 
+  left: 12%; 
+  animation-delay: 6s; 
+  background: var(--accent-gradient);
+}
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(180deg); }
+  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+  50% { transform: translateY(-30px) rotate(180deg) scale(1.1); }
 }
 
-/* Main Chat Card */
+/* Particle System */
+.chat-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: var(--accent-gradient);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleFloat 15s linear infinite;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% {
+    transform: translateY(-100px) translateX(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Main Chat Container */
+.chat-content {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Ultra-Enhanced Chat Card */
 .chat-page-container {
   position: relative;
   z-index: 2;
   display: flex;
   flex-direction: column;
-  height: 85vh;
+  height: 90vh;
   width: 100%;
-  max-width: 900px;
+  max-width: 1000px;
   background: var(--card-bg);
-  border-radius: 2rem;
+  border-radius: 2.5rem;
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(25px);
   box-shadow: 
     var(--shadow-card),
-    var(--shadow-glow);
+    var(--shadow-glow),
+    0 0 60px rgba(102, 126, 234, 0.2);
   overflow: hidden;
-  animation: slideUp 0.8s ease-out;
+  animation: slideUp 1s ease-out;
+  position: relative;
+}
+
+.chat-page-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(45deg, 
+    rgba(102, 126, 234, 0.03) 0%, 
+    rgba(247, 37, 133, 0.03) 50%, 
+    rgba(79, 172, 254, 0.03) 100%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 @keyframes slideUp {
   from {
     opacity: 0;
-    transform: translateY(30px);
+    transform: translateY(50px) scale(0.95);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
-/* Enhanced Chat Header */
+/* Ultra-Enhanced Chat Header */
 .enhanced-chat-header {
-  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
+  background: linear-gradient(135deg, 
+    rgba(102, 126, 234, 0.95), 
+    rgba(118, 75, 162, 0.95),
+    rgba(247, 37, 133, 0.95));
   color: white;
-  padding: 2rem;
+  padding: 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(20px);
   position: relative;
   overflow: hidden;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .enhanced-chat-header::before {
@@ -131,27 +222,107 @@ body {
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.15), 
+    transparent);
+  transition: left 0.8s ease;
 }
 
 .enhanced-chat-header:hover::before {
   left: 100%;
 }
 
-.chat-header-info h1 {
+.chat-header-info {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.chat-avatar {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 1.8rem;
+  box-shadow: 0 8px 25px rgba(79, 172, 254, 0.4);
+  animation: pulse 3s ease-in-out infinite;
+  position: relative;
+}
+
+.chat-avatar::before {
+  content: '';
+  position: absolute;
+  top: -3px;
+  left: -3px;
+  right: -3px;
+  bottom: -3px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  opacity: 0.3;
+  animation: ripple 2s ease-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+@keyframes ripple {
+  0% {
+    transform: scale(0.8);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1.2);
+    opacity: 0;
+  }
+}
+
+.chat-header-text h1 {
+  font-size: 2rem;
   font-weight: 700;
   margin-bottom: 0.5rem;
   background: linear-gradient(135deg, #ffffff, #e0e7ff);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
+  animation: glow 2s ease-in-out infinite alternate;
 }
 
-.chat-header-info p {
+@keyframes glow {
+  from { text-shadow: 0 0 10px rgba(255, 255, 255, 0.5); }
+  to { text-shadow: 0 0 20px rgba(255, 255, 255, 0.8); }
+}
+
+.chat-header-text p {
   font-weight: 400;
   opacity: 0.9;
-  font-size: 0.95rem;
+  font-size: 1rem;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.chat-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: rgba(16, 185, 129, 1);
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success-gradient);
+  animation: blink 2s ease-in-out infinite;
+}
+
+@keyframes blink {
+  0%, 50% { opacity: 1; }
+  51%, 100% { opacity: 0.3; }
 }
 
 .enhanced-header-actions {
@@ -160,92 +331,126 @@ body {
 }
 
 .enhanced-chat-btn {
-  padding: 0.8rem 1.5rem;
+  padding: 1rem 2rem;
   border-radius: 50px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.8rem;
   backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
+  font-size: 0.95rem;
+}
+
+.enhanced-chat-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent);
+  transition: left 0.6s ease;
+}
+
+.enhanced-chat-btn:hover::before {
+  left: 100%;
 }
 
 .new-chat-btn-enhanced {
   background: rgba(255, 255, 255, 0.2);
   color: white;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
 .new-chat-btn-enhanced:hover {
   background: rgba(255, 255, 255, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .delete-chat-btn-enhanced {
   background: rgba(239, 68, 68, 0.2);
   color: #fecaca;
-  border: 1px solid rgba(239, 68, 68, 0.3);
+  border: 2px solid rgba(239, 68, 68, 0.3);
 }
 
 .delete-chat-btn-enhanced:hover {
   background: rgba(239, 68, 68, 0.3);
-  transform: translateY(-2px);
-  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+  transform: translateY(-3px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
 }
 
-/* Enhanced Chat Window */
+/* Ultra-Enhanced Chat Window */
 .enhanced-chat-window {
   flex: 1;
   overflow-y: auto;
-  padding: 2rem;
+  padding: 2.5rem;
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 2rem;
   background: 
-    radial-gradient(circle at 100% 100%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
-    radial-gradient(circle at 0% 0%, rgba(247, 37, 133, 0.05) 0%, transparent 50%);
+    radial-gradient(circle at 100% 100%, rgba(102, 126, 234, 0.03) 0%, transparent 50%),
+    radial-gradient(circle at 0% 0%, rgba(247, 37, 133, 0.03) 0%, transparent 50%);
+  position: relative;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(102, 126, 234, 0.6) rgba(255, 255, 255, 0.1);
 }
 
 .enhanced-chat-window::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .enhanced-chat-window::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
 .enhanced-chat-window::-webkit-scrollbar-thumb {
   background: var(--primary-gradient);
-  border-radius: 3px;
+  border-radius: 4px;
+  transition: all 0.3s ease;
 }
 
-/* Enhanced Message Bubbles */
+.enhanced-chat-window::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+}
+
+/* Ultra-Enhanced Message Bubbles */
 .enhanced-message-bubble {
-  max-width: 70%;
-  padding: 1.2rem 1.8rem;
-  border-radius: 1.5rem;
-  animation: messageSlideIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  max-width: 75%;
+  padding: 1.5rem 2rem;
+  border-radius: 2rem;
+  animation: messageSlideIn 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   line-height: 1.6;
   word-wrap: break-word;
   position: relative;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
   border: 1px solid transparent;
+  transition: all 0.4s ease;
+}
+
+.enhanced-message-bubble:hover {
+  transform: translateY(-2px);
 }
 
 @keyframes messageSlideIn {
   from {
     opacity: 0;
-    transform: translateY(20px) scale(0.95);
+    transform: translateY(30px) scale(0.9) rotateX(-10deg);
   }
   to {
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: translateY(0) scale(1) rotateX(0deg);
   }
 }
 
@@ -253,91 +458,204 @@ body {
   background: var(--primary-gradient);
   color: white;
   align-self: flex-end;
-  border-bottom-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.8rem;
   box-shadow: 
-    0 8px 25px rgba(102, 126, 234, 0.3),
+    0 12px 30px rgba(102, 126, 234, 0.4),
     inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  position: relative;
+}
+
+.enhanced-user-message::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, 
+    rgba(255, 255, 255, 0.1) 0%, 
+    transparent 50%);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+.enhanced-user-message:hover {
+  box-shadow: 
+    0 20px 40px rgba(102, 126, 234, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .enhanced-ai-message {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.08);
   color: var(--text-primary);
   align-self: flex-start;
-  border-bottom-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.8rem;
   border: 1px solid rgba(255, 255, 255, 0.1);
   box-shadow: 
-    0 8px 25px rgba(0, 0, 0, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    0 12px 30px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  position: relative;
 }
 
 .enhanced-ai-message::before {
   content: '🤖';
   position: absolute;
-  left: -40px;
+  left: -50px;
   top: 50%;
   transform: translateY(-50%);
-  font-size: 1.5rem;
+  font-size: 2rem;
   background: var(--secondary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  opacity: 0.8;
+  opacity: 0.9;
+  transition: all 0.3s ease;
+  animation: robotBounce 3s ease-in-out infinite;
 }
 
-/* Enhanced Input Area */
+@keyframes robotBounce {
+  0%, 100% { transform: translateY(-50%) rotate(0deg); }
+  25% { transform: translateY(-60%) rotate(5deg); }
+  75% { transform: translateY(-40%) rotate(-5deg); }
+}
+
+.enhanced-ai-message:hover::before {
+  transform: translateY(-50%) scale(1.2);
+}
+
+.enhanced-ai-message:hover {
+  box-shadow: 
+    0 20px 40px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.message-text-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+  position: relative;
+  z-index: 1;
+}
+
+.message-line {
+  margin: 0.4rem 0;
+  animation: textReveal 0.5s ease-out;
+}
+
+@keyframes textReveal {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.message-line:first-child {
+  margin-top: 0;
+}
+
+.message-line:last-child {
+  margin-bottom: 0;
+}
+
+.message-timestamp {
+  font-size: 0.8rem;
+  opacity: 0.7;
+  margin-top: 1rem;
+  text-align: right;
+  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+/* Ultra-Enhanced Input Area */
 .enhanced-chat-input-container {
-  padding: 2rem;
-  background: rgba(255, 255, 255, 0.05);
+  padding: 2.5rem;
+  background: rgba(255, 255, 255, 0.03);
   border-top: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(20px);
+  backdrop-filter: blur(25px);
   position: relative;
 }
 
 .enhanced-input-group {
   display: flex;
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: center;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 50px;
-  padding: 0.5rem;
-  backdrop-filter: blur(10px);
-  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.08);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  border-radius: 60px;
+  padding: 0.8rem;
+  backdrop-filter: blur(15px);
+  transition: all 0.4s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.enhanced-input-group::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(102, 126, 234, 0.1), 
+    transparent);
+  transition: left 0.8s ease;
 }
 
 .enhanced-input-group:focus-within {
   border-color: rgba(102, 126, 234, 0.6);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
+  box-shadow: 0 0 0 4px rgba(102, 126, 234, 0.2);
+  transform: translateY(-3px);
+}
+
+.enhanced-input-group:focus-within::before {
+  left: 100%;
 }
 
 .enhanced-chat-input {
   flex-grow: 1;
-  padding: 1rem 1.5rem;
+  padding: 1.2rem 2rem;
   background: transparent;
   border: none;
   color: var(--text-primary);
-  font-size: 1rem;
+  font-size: 1.1rem;
   outline: none;
+  font-weight: 400;
 }
 
 .enhanced-chat-input::placeholder {
   color: var(--text-muted);
+  font-weight: 300;
 }
 
 .enhanced-input-btn {
-  width: 50px;
-  height: 50px;
+  width: 55px;
+  height: 55px;
   border-radius: 50%;
   border: none;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.4s ease;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
+  font-size: 1.3rem;
   position: relative;
   overflow: hidden;
+}
+
+.enhanced-input-btn::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 50%;
+  transition: all 0.3s ease;
 }
 
 .mic-btn {
@@ -346,13 +664,18 @@ body {
 }
 
 .mic-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 8px 20px rgba(247, 37, 133, 0.4);
+  transform: scale(1.15) rotate(5deg);
+  box-shadow: 0 12px 25px rgba(247, 37, 133, 0.4);
+}
+
+.mic-btn:hover::before {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 .mic-btn.recording {
   background: var(--success-gradient);
   animation: pulse 1.5s infinite;
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.6);
 }
 
 .send-btn {
@@ -361,22 +684,60 @@ body {
 }
 
 .send-btn:hover {
-  transform: scale(1.1);
-  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+  transform: scale(1.15) rotate(-5deg);
+  box-shadow: 0 12px 25px rgba(102, 126, 234, 0.4);
+}
+
+.send-btn:hover::before {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 @keyframes pulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.05); }
+  50% { transform: scale(1.1); }
 }
 
-/* Enhanced Typing Indicator */
+/* Ultra-Enhanced Typing Indicator */
 .enhanced-typing-indicator {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 1rem 2rem;
-  gap: 0.8rem;
+  padding: 1.5rem 2.5rem;
+  gap: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 2rem;
+  margin: 1rem 0;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(15px);
+  animation: typingSlideIn 0.5s ease-out;
+}
+
+@keyframes typingSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.typing-avatar {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background: var(--accent-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  animation: avatarPulse 2s ease-in-out infinite;
+}
+
+@keyframes avatarPulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.8; }
 }
 
 .typing-dot {
@@ -385,16 +746,16 @@ body {
   background: var(--accent-gradient);
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out both;
-  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
+  box-shadow: 0 4px 12px rgba(79, 172, 254, 0.4);
 }
 
-.typing-dot:nth-child(1) { animation-delay: -0.32s; }
-.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+.typing-dot:nth-child(2) { animation-delay: -0.32s; }
+.typing-dot:nth-child(3) { animation-delay: -0.16s; }
 
 @keyframes bounce {
   0%, 80%, 100% { 
     transform: scale(0.8);
-    opacity: 0.5;
+    opacity: 0.6;
   }
   40% { 
     transform: scale(1.2);
@@ -404,34 +765,114 @@ body {
 
 .typing-text {
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 500;
+  margin-left: 0.5rem;
 }
 
-/* Message Timestamp */
-.message-timestamp {
-  font-size: 0.75rem;
-  opacity: 0.6;
-  margin-top: 0.5rem;
-  text-align: right;
+/* Scroll to Bottom Button */
+.scroll-to-bottom-btn {
+  position: absolute;
+  bottom: 3rem;
+  right: 3rem;
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  border: none;
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.3rem;
+  box-shadow: 0 12px 30px rgba(102, 126, 234, 0.4);
+  transition: all 0.4s ease;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(30px) scale(0.8);
+}
+
+.scroll-to-bottom-btn.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.scroll-to-bottom-btn:hover {
+  transform: translateY(-5px) scale(1.1);
+  box-shadow: 0 20px 40px rgba(102, 126, 234, 0.6);
+}
+
+/* New Message Indicator */
+.new-message-indicator {
+  position: absolute;
+  bottom: 6rem;
+  right: 3rem;
+  background: var(--secondary-gradient);
+  color: white;
+  padding: 0.8rem 1.5rem;
+  border-radius: 30px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(247, 37, 133, 0.4);
+  transition: all 0.4s ease;
+  z-index: 10;
+  opacity: 0;
+  transform: translateY(30px);
+}
+
+.new-message-indicator.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.new-message-indicator:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 25px rgba(247, 37, 133, 0.6);
+}
+
+/* Message Highlight Animation */
+@keyframes messageHighlight {
+  0% {
+    background-color: rgba(102, 126, 234, 0.1);
+    transform: scale(1);
+  }
+  50% {
+    background-color: rgba(102, 126, 234, 0.2);
+    transform: scale(1.02);
+  }
+  100% {
+    background-color: transparent;
+    transform: scale(1);
+  }
+}
+
+.message-highlight {
+  animation: messageHighlight 2s ease-out;
 }
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .enhanced-chat-container {
+  .chat-content {
     padding: 1rem;
-    height: 90vh;
   }
   
   .chat-page-container {
-    border-radius: 1.5rem;
+    border-radius: 2rem;
+    height: 95vh;
   }
   
   .enhanced-chat-header {
-    padding: 1.5rem;
+    padding: 2rem;
+    flex-direction: column;
+    gap: 1.5rem;
+    text-align: center;
+  }
+  
+  .chat-header-info {
     flex-direction: column;
     gap: 1rem;
-    text-align: center;
   }
   
   .enhanced-header-actions {
@@ -441,15 +882,36 @@ body {
   
   .enhanced-message-bubble {
     max-width: 85%;
+    padding: 1.2rem 1.5rem;
   }
   
   .enhanced-ai-message::before {
-    left: -30px;
-    font-size: 1.2rem;
+    left: -40px;
+    font-size: 1.5rem;
   }
   
   .enhanced-chat-window {
-    padding: 1.5rem;
+    padding: 2rem;
+  }
+  
+  .enhanced-chat-input-container {
+    padding: 2rem;
+  }
+  
+  .enhanced-input-group {
+    gap: 1rem;
+  }
+  
+  .enhanced-input-btn {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .scroll-to-bottom-btn {
+    bottom: 2rem;
+    right: 2rem;
+    width: 50px;
+    height: 50px;
   }
 }
 
@@ -464,12 +926,12 @@ body {
   }
   
   .enhanced-input-group {
-    gap: 0.5rem;
+    gap: 0.8rem;
   }
   
-  .enhanced-input-btn {
-    width: 45px;
-    height: 45px;
+  .enhanced-chat-input {
+    font-size: 1rem;
+    padding: 1rem 1.5rem;
   }
 }
 `;
@@ -478,10 +940,7 @@ interface Message {
   id: string;
   sender: 'user' | 'ai';
   content: string | React.ReactElement;
-  timestamp: Date;
-  itinerary?: any;
-  costBreakdown?: any;
-  bookingConfirmation?: any;
+  timestamp?: Date;
 }
 
 interface Location {
@@ -489,197 +948,200 @@ interface Location {
   longitude: number;
 }
 
-// Enhanced ChatHeader Component
-interface EnhancedChatHeaderProps {
+// Enhanced Chat Header Component
+const EnhancedChatHeader: React.FC<{
   onNewChat: () => void;
   onDeleteChat: () => void;
-}
-const EnhancedChatHeader: React.FC<EnhancedChatHeaderProps> = ({ onNewChat, onDeleteChat }) => {
-  return (
-    <div className="enhanced-chat-header">
-      <div className="chat-header-info">
-        <h1>AI Travel Agent</h1>
-        <p>Your intelligent assistant for travel planning</p>
-      </div>
-      <div className="enhanced-header-actions">
-        <button className="enhanced-chat-btn new-chat-btn-enhanced" onClick={onNewChat}>
-          <i className="fas fa-plus"></i>
-          New Chat
-        </button>
-        <button className="enhanced-chat-btn delete-chat-btn-enhanced" onClick={onDeleteChat}>
-          <i className="fas fa-trash"></i>
-        </button>
+}> = ({ onNewChat, onDeleteChat }) => (
+  <div className="enhanced-chat-header">
+    <div className="chat-header-info">
+      <div className="chat-avatar">🤖</div>
+      <div className="chat-header-text">
+        <h1>TravelBot AI</h1>
+        <p>Your intelligent travel companion</p>
+        <div className="chat-status">
+          <div className="status-dot"></div>
+          <span>Online & Ready</span>
+        </div>
       </div>
     </div>
-  );
-};
+    <div className="enhanced-header-actions">
+      <button 
+        className="enhanced-chat-btn new-chat-btn-enhanced"
+        onClick={onNewChat}
+      >
+        <i className="fas fa-plus"></i>
+        New Chat
+      </button>
+      <button 
+        className="enhanced-chat-btn delete-chat-btn-enhanced"
+        onClick={onDeleteChat}
+      >
+        <i className="fas fa-trash"></i>
+        Clear
+      </button>
+    </div>
+  </div>
+);
 
-// Enhanced ChatWindow Component
-interface EnhancedChatWindowProps {
-  messages: Message[];
-}
-const EnhancedChatWindow: React.FC<EnhancedChatWindowProps> = ({ messages }) => {
+// Enhanced Chat Window Component
+const EnhancedChatWindow: React.FC<{ messages: Message[] }> = ({ messages }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
+  const renderMessageContent = (content: string | React.ReactElement) => {
+    if (React.isValidElement(content)) {
+      return content;
+    }
+    
+    return (
+      <div className="message-text-content">
+        {String(content).split('\n').map((line, index) => (
+          <p key={index} className="message-line">
+            {line}
+          </p>
+        ))}
+      </div>
+    );
+  };
+
+  const formatTime = (timestamp?: Date) => {
+    if (!timestamp) return '';
+    return timestamp.toLocaleTimeString('en-US', { 
       hour: '2-digit', 
       minute: '2-digit',
       hour12: true 
     });
   };
 
-  const renderContent = (content: string | React.ReactElement) => {
-    if (React.isValidElement(content)) {
-      return content;
-    }
-    return <p>{content}</p>;
-  };
-
   return (
-    <div className="enhanced-chat-window">
-      {messages.map((message) => (
+    <div 
+      className="enhanced-chat-window"
+      ref={chatContainerRef}
+    >
+      {messages.map((message, index) => (
         <div
           key={message.id}
           className={`enhanced-message-bubble ${
             message.sender === 'user' ? 'enhanced-user-message' : 'enhanced-ai-message'
-          }`}
+          } ${index === messages.length - 1 ? 'message-highlight' : ''}`}
         >
-          {renderContent(message.content)}
-          <div className="message-timestamp">
-            {formatTime(message.timestamp)}
-          </div>
+          {renderMessageContent(message.content)}
+          {message.timestamp && (
+            <div className="message-timestamp">
+              {formatTime(message.timestamp)}
+            </div>
+          )}
         </div>
       ))}
-      <div ref={messagesEndRef} />
+      
+      {/* Scroll target for auto-scroll */}
+      <div ref={messagesEndRef} style={{ height: '1px' }} />
     </div>
   );
 };
 
-// Enhanced MessageInput Component
-interface EnhancedMessageInputProps {
+// Enhanced Message Input Component
+const EnhancedMessageInput: React.FC<{
   onSendMessage: (message: string) => void;
-}
-const EnhancedMessageInput: React.FC<EnhancedMessageInputProps> = ({ onSendMessage }) => {
-  const [input, setInput] = useState('');
+}> = ({ onSendMessage }) => {
+  const [message, setMessage] = useState('');
   const [isRecording, setIsRecording] = useState(false);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
-
-  useEffect(() => {
-    if ('SpeechRecognition' in window || 'webkitSpeechRecognition' in window) {
-      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-      recognitionRef.current = new SpeechRecognition();
-      recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
-      recognitionRef.current.lang = 'en-US';
-
-      recognitionRef.current.onresult = (event: SpeechRecognitionEvent) => {
-        const transcript = event.results[0][0].transcript;
-        setInput(transcript);
-        setIsRecording(false);
-      };
-
-      recognitionRef.current.onerror = () => {
-        setIsRecording(false);
-      };
-
-      recognitionRef.current.onend = () => {
-        setIsRecording(false);
-      };
-    }
-  }, []);
-
-  const toggleRecording = () => {
-    if (recognitionRef.current) {
-      if (isRecording) {
-        recognitionRef.current.stop();
-      } else {
-        setInput('');
-        recognitionRef.current.start();
-      }
-      setIsRecording(!isRecording);
-    }
-  };
+  const [isListening, setIsListening] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (input.trim()) {
-      onSendMessage(input);
-      setInput('');
-      if (isRecording && recognitionRef.current) {
-        recognitionRef.current.stop();
-        setIsRecording(false);
-      }
+    if (message.trim()) {
+      onSendMessage(message);
+      setMessage('');
+    }
+  };
+
+  const handleVoiceInput = () => {
+    if (!isListening) {
+      // Start voice recognition
+      setIsListening(true);
+      // Simulate voice input
+      setTimeout(() => {
+        setMessage("I'd like to plan a trip to Japan for 2 weeks");
+        setIsListening(false);
+      }, 2000);
     }
   };
 
   return (
     <div className="enhanced-chat-input-container">
-      <form onSubmit={handleSubmit}>
-        <div className="enhanced-input-group">
-          <button 
-            type="button" 
-            onClick={toggleRecording} 
-            className={`enhanced-input-btn mic-btn ${isRecording ? 'recording' : ''}`}
-          >
-            {isRecording ? <i className="fas fa-stop"></i> : <i className="fas fa-microphone"></i>}
-          </button>
-          <input
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={isRecording ? "Listening... Speak now" : "Ask about destinations, budgets, or travel plans..."}
-            className="enhanced-chat-input"
-            disabled={isRecording}
-          />
-          <button type="submit" className="enhanced-input-btn send-btn" disabled={!input.trim()}>
-            <i className="fas fa-paper-plane"></i>
-          </button>
-        </div>
+      <form onSubmit={handleSubmit} className="enhanced-input-group">
+        <input
+          type="text"
+          className="enhanced-chat-input"
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Ask me anything about travel planning..."
+          disabled={isListening}
+        />
+        <button
+          type="button"
+          className={`enhanced-input-btn mic-btn ${isListening ? 'recording' : ''}`}
+          onClick={handleVoiceInput}
+          disabled={isListening}
+        >
+          <i className={isListening ? 'fas fa-stop' : 'fas fa-microphone'}></i>
+        </button>
+        <button
+          type="submit"
+          className="enhanced-input-btn send-btn"
+          disabled={!message.trim()}
+        >
+          <i className="fas fa-paper-plane"></i>
+        </button>
       </form>
     </div>
   );
 };
 
-// Enhanced Typing Indicator
-const EnhancedTypingIndicator: React.FC = () => {
-  return (
-    <div className="enhanced-typing-indicator">
-      <div className="typing-dot"></div>
-      <div className="typing-dot"></div>
-      <div className="typing-dot"></div>
-      <span className="typing-text">AI is thinking...</span>
-    </div>
-  );
-};
+// Enhanced Typing Indicator Component
+const EnhancedTypingIndicator: React.FC = () => (
+  <div className="enhanced-typing-indicator">
+    <div className="typing-avatar">🤖</div>
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+    <span className="typing-text">TravelBot is thinking...</span>
+  </div>
+);
 
 // Main Enhanced ChatPage Component
 const EnhancedChatPage: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: uuidv4(),
-      sender: 'ai',
-      content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
-      timestamp: new Date(),
-    },
-  ]);
-  const [userId, setUserId] = useState<string>('');
-  const [sessionId, setSessionId] = useState<string>('');
-  const [currentLocation, setCurrentLocation] = useState<Location | undefined>(undefined);
-  const [isAITyping, setIsAITyping] = useState<boolean>(false);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [sessionId, setSessionId] = useState('');
+  const [isAITyping, setIsAITyping] = useState(false);
+  const [currentLocation, setCurrentLocation] = useState<Location | null>(null);
+  const [userId] = useState(() => `user_${Date.now()}`);
+  const particlesRef = useRef<HTMLDivElement>(null);
 
+  // Generate particles
   useEffect(() => {
-    let storedUserId: string | null = localStorage.getItem('travelAgentUserId');
-    if (!storedUserId) {
-      storedUserId = uuidv4();
-      localStorage.setItem('travelAgentUserId', storedUserId!);
+    if (particlesRef.current) {
+      const particles = Array.from({ length: 25 }, (_, i) => {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 15 + 's';
+        particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
+        return particle;
+      });
+      
+      particlesRef.current.append(...particles);
     }
-    setUserId(storedUserId!);
+  }, []);
 
+  // Get user location
+  useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
         (position) => {
@@ -688,13 +1150,14 @@ const EnhancedChatPage: React.FC = () => {
             longitude: position.coords.longitude,
           });
         },
-        (error) => {
-          console.error("Error getting geolocation:", error);
+        () => {
+          console.log('Location access denied');
         }
       );
     }
   }, []);
 
+  // Start new session when component mounts
   useEffect(() => {
     if (userId && !sessionId) {
       startNewSession(userId);
@@ -710,7 +1173,7 @@ const EnhancedChatPage: React.FC = () => {
           {
             id: uuidv4(),
             sender: 'ai',
-            content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
+            content: "🌟 Welcome to TravelBot! I'm your AI travel companion, ready to help you plan amazing adventures. Whether you need destination recommendations, itinerary planning, budget calculations, or travel tips - I'm here to make your travel dreams come true! Where would you like to explore today?",
             timestamp: new Date(),
           },
         ]);
@@ -797,7 +1260,7 @@ const EnhancedChatPage: React.FC = () => {
           {
             id: uuidv4(),
             sender: 'ai',
-            content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
+            content: "🌟 Welcome back! I'm TravelBot, your AI travel companion. I'm ready to help you plan your next amazing adventure! Where would you like to explore today?",
             timestamp: new Date(),
           },
         ]);
@@ -814,21 +1277,26 @@ const EnhancedChatPage: React.FC = () => {
     <>
       <style>{enhancedChatStyles}</style>
       <div className="enhanced-chat-container">
-        {/* Animated Background */}
+        {/* Ultra-Advanced Background Elements */}
         <div className="chat-background-elements">
           <div className="chat-floating-shape chat-shape-1"></div>
           <div className="chat-floating-shape chat-shape-2"></div>
           <div className="chat-floating-shape chat-shape-3"></div>
         </div>
 
-        <div className="chat-page-container">
-          <EnhancedChatHeader 
-            onNewChat={() => startNewSession(userId)} 
-            onDeleteChat={handleDeleteChat} 
-          />
-          <EnhancedChatWindow messages={messages} />
-          {isAITyping && <EnhancedTypingIndicator />}
-          <EnhancedMessageInput onSendMessage={handleSendMessage} />
+        {/* Particle System */}
+        <div className="chat-particles" ref={particlesRef}></div>
+
+        <div className="chat-content">
+          <div className="chat-page-container">
+            <EnhancedChatHeader 
+              onNewChat={() => startNewSession(userId)} 
+              onDeleteChat={handleDeleteChat} 
+            />
+            <EnhancedChatWindow messages={messages} />
+            {isAITyping && <EnhancedTypingIndicator />}
+            <EnhancedMessageInput onSendMessage={handleSendMessage} />
+          </div>
         </div>
       </div>
     </>
