@@ -10,6 +10,7 @@ const enhancedBudgetStyles = `
   --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
   --accent-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
   --success-gradient: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
   
   --dark-bg: #0f0f23;
   --card-bg: rgba(255, 255, 255, 0.08);
@@ -23,21 +24,33 @@ const enhancedBudgetStyles = `
   --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
-.enhanced-budget-wrapper {
-  min-height: 100vh;
-  background: 
-    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.1) 0%, transparent 50%),
-    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.05) 0%, transparent 50%);
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  background: var(--dark-bg);
+  color: var(--text-primary);
   overflow-x: hidden;
 }
 
-/* Animated Background Elements */
+.enhanced-budget-wrapper {
+  min-height: 100vh;
+  background: var(--dark-bg);
+  background-image: 
+    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.15) 0%, transparent 60%),
+    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.12) 0%, transparent 60%),
+    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.08) 0%, transparent 60%),
+    radial-gradient(circle at 60% 80%, rgba(16, 185, 129, 0.1) 0%, transparent 50%);
+  position: relative;
+  overflow: hidden;
+  backdrop-filter: blur(1px);
+}
+
+/* Advanced Background Elements */
 .budget-background-elements {
   position: absolute;
   top: 0;
@@ -53,34 +66,192 @@ const enhancedBudgetStyles = `
   border-radius: 50%;
   background: var(--primary-gradient);
   opacity: 0.1;
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
 }
 
-.budget-shape-1 { width: 200px; height: 200px; top: 10%; left: 5%; animation-delay: 0s; }
-.budget-shape-2 { width: 150px; height: 150px; top: 60%; right: 10%; animation-delay: 2s; }
-.budget-shape-3 { width: 100px; height: 100px; bottom: 20%; left: 15%; animation-delay: 4s; }
+.budget-shape-1 { width: 300px; height: 300px; top: 5%; left: 3%; animation-delay: 0s; }
+.budget-shape-2 { width: 200px; height: 200px; top: 65%; right: 8%; animation-delay: 3s; }
+.budget-shape-3 { width: 150px; height: 150px; bottom: 15%; left: 12%; animation-delay: 6s; }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-20px) rotate(180deg); }
+  0%, 100% { transform: translateY(0px) rotate(0deg) scale(1); }
+  50% { transform: translateY(-30px) rotate(180deg) scale(1.1); }
+}
+
+/* Particle System */
+.budget-particles {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.particle {
+  position: absolute;
+  width: 2px;
+  height: 2px;
+  background: var(--accent-gradient);
+  border-radius: 50%;
+  opacity: 0;
+  animation: particleFloat 12s linear infinite;
+}
+
+@keyframes particleFloat {
+  0% {
+    transform: translateY(100vh) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% { opacity: 0.8; }
+  90% { opacity: 0.8; }
+  100% {
+    transform: translateY(-100px) translateX(100px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Main Content */
+.budget-content {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+/* Enhanced Header */
+.budget-header {
+  text-align: center;
+  margin-bottom: 4rem;
+  animation: slideDown 1s ease-out;
+}
+
+.budget-title {
+  font-size: 4rem;
+  font-weight: 800;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 1.5rem;
+  position: relative;
+  animation: fadeInUp 0.8s ease 0.2s both;
+}
+
+.budget-title::after {
+  content: '';
+  position: absolute;
+  bottom: -15px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 150px;
+  height: 4px;
+  background: var(--primary-gradient);
+  border-radius: 2px;
+  animation: expandWidth 1s ease 0.5s both;
+}
+
+@keyframes expandWidth {
+  from { width: 0; }
+  to { width: 150px; }
+}
+
+.budget-subtitle {
+  font-size: 1.4rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  max-width: 700px;
+  margin-left: auto;
+  margin-right: auto;
+  line-height: 1.6;
+  animation: fadeInUp 0.8s ease 0.4s both;
+}
+
+/* Progress Indicator */
+.budget-progress {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 3rem;
+  animation: fadeInUp 0.8s ease 0.6s both;
+}
+
+.progress-steps {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  opacity: 0.4;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active {
+  opacity: 1;
+}
+
+.progress-step.completed {
+  opacity: 1;
+}
+
+.step-circle {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.progress-step.active .step-circle {
+  background: var(--primary-gradient);
+  border-color: rgba(102, 126, 234, 0.8);
+  color: white;
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.4);
+}
+
+.progress-step.completed .step-circle {
+  background: var(--success-gradient);
+  border-color: rgba(16, 185, 129, 0.8);
+  color: white;
+}
+
+.step-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.progress-line {
+  width: 60px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.2);
+  margin: 0 1rem;
+}
+
+.progress-line.completed {
+  background: var(--success-gradient);
 }
 
 /* Main Container */
-.enhanced-budget-container {
-  position: relative;
-  z-index: 2;
-  width: 100%;
-  max-width: 1200px;
-  background: var(--card-bg);
-  border-radius: 2rem;
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(20px);
-  box-shadow: 
-    var(--shadow-card),
-    var(--shadow-glow);
-  overflow: hidden;
-  animation: slideUp 0.8s ease-out;
-  padding: 3rem;
+.budget-main-container {
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 4rem;
+  flex: 1;
+  animation: slideUp 0.8s ease 0.8s both;
 }
 
 @keyframes slideUp {
@@ -94,66 +265,148 @@ const enhancedBudgetStyles = `
   }
 }
 
-/* Header Section */
-.budget-header {
-  text-align: center;
+/* Input Section */
+.budget-input-section {
+  background: var(--card-bg);
+  border-radius: 2rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  padding: 3rem;
+  position: relative;
+  overflow: hidden;
+  animation: slideInLeft 1s ease-out;
+}
+
+.budget-input-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
+  transition: left 0.8s;
+}
+
+.budget-input-section:hover::before {
+  left: 100%;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  background: var(--secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin-bottom: 2rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-title i {
+  font-size: 1.5rem;
+  background: var(--accent-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+/* Enhanced Input Grid */
+.budget-inputs {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 2rem;
   margin-bottom: 3rem;
+}
+
+.input-group {
   position: relative;
 }
 
-.budget-title {
-  font-size: 3.5rem;
-  font-weight: 800;
-  background: var(--primary-gradient);
+.input-label {
+  display: block;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 1rem;
-  animation: fadeInUp 0.8s ease 0.2s both;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.budget-subtitle {
-  font-size: 1.3rem;
-  color: var(--text-secondary);
-  margin-bottom: 2rem;
-  animation: fadeInUp 0.8s ease 0.4s both;
-  max-width: 600px;
-  margin-left: auto;
-  margin-right: auto;
-  line-height: 1.6;
+.input-label i {
+  font-size: 1.2rem;
+  background: var(--secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-/* Budget Controls */
-.budget-controls {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 2rem;
-  margin-bottom: 3rem;
-  animation: fadeInUp 0.8s ease 0.6s both;
-}
-
-.budget-control-card {
+.input-field {
+  width: 100%;
+  padding: 1.2rem 1.5rem;
   background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: 1.5rem;
-  padding: 2rem;
-  backdrop-filter: blur(10px);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  color: var(--text-primary);
+  font-size: 1rem;
   transition: all 0.3s ease;
+  backdrop-filter: blur(10px);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: rgba(102, 126, 234, 0.6);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+.select-field {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+  background-position: right 1rem center;
+  background-repeat: no-repeat;
+  background-size: 1rem;
+  cursor: pointer;
+}
+
+.select-field option {
+  background: var(--dark-bg);
+  color: var(--text-primary);
+}
+
+/* Budget Tier Selector */
+.budget-tier-selector {
+  margin: 2rem 0;
+}
+
+.tier-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.tier-option {
+  padding: 1.5rem;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
   position: relative;
   overflow: hidden;
 }
 
-.budget-control-card::before {
+.tier-option::before {
   content: '';
   position: absolute;
   top: 0;
@@ -164,81 +417,50 @@ const enhancedBudgetStyles = `
   transition: left 0.5s;
 }
 
-.budget-control-card:hover::before {
+.tier-option:hover::before {
   left: 100%;
 }
 
-.budget-control-card:hover {
+.tier-option:hover {
   transform: translateY(-5px);
   border-color: rgba(102, 126, 234, 0.5);
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
 }
 
-.control-label {
-  display: block;
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 1rem;
-  background: var(--secondary-gradient);
+.tier-option.selected {
+  border-color: rgba(102, 126, 234, 0.8);
+  background: rgba(102, 126, 234, 0.1);
+  box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+}
+
+.tier-icon {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  background: var(--primary-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-.control-input {
-  width: 100%;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--glass-border);
-  border-radius: 1rem;
+.tier-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
   color: var(--text-primary);
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
 }
 
-.control-input:focus {
-  outline: none;
-  border-color: rgba(102, 126, 234, 0.6);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
-}
-
-.control-select {
-  width: 100%;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid var(--glass-border);
-  border-radius: 1rem;
-  color: var(--text-primary);
-  font-size: 1rem;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  cursor: pointer;
-}
-
-.control-select:focus {
-  outline: none;
-  border-color: rgba(102, 126, 234, 0.6);
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
-  transform: translateY(-2px);
-}
-
-.control-select option {
-  background: var(--dark-bg);
-  color: var(--text-primary);
+.tier-description {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
 }
 
 /* Action Buttons */
 .budget-actions {
   display: flex;
   justify-content: center;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-  animation: fadeInUp 0.8s ease 0.8s both;
+  gap: 2rem;
+  margin-top: 3rem;
 }
 
-.budget-btn {
+.action-btn {
   padding: 1.2rem 2.5rem;
   border-radius: 50px;
   font-weight: 600;
@@ -254,12 +476,12 @@ const enhancedBudgetStyles = `
   backdrop-filter: blur(10px);
 }
 
-.budget-btn-primary {
+.btn-primary {
   background: var(--primary-gradient);
   color: white;
 }
 
-.budget-btn-primary::before {
+.btn-primary::before {
   content: '';
   position: absolute;
   top: 0;
@@ -270,126 +492,277 @@ const enhancedBudgetStyles = `
   transition: left 0.5s;
 }
 
-.budget-btn-primary:hover::before {
+.btn-primary:hover::before {
   left: 100%;
 }
 
-.budget-btn-primary:hover {
+.btn-primary:hover {
   transform: translateY(-3px);
   box-shadow: 0 15px 30px rgba(102, 126, 234, 0.4);
 }
 
-.budget-btn-outline {
+.btn-secondary {
   background: transparent;
   border: 2px solid rgba(102, 126, 234, 0.5);
   color: var(--text-primary);
 }
 
-.budget-btn-outline:hover {
+.btn-secondary:hover {
   background: rgba(102, 126, 234, 0.1);
   border-color: rgba(102, 126, 234, 0.8);
   transform: translateY(-3px);
 }
 
-/* Cost Breakdown Section */
-.cost-breakdown-section {
-  animation: fadeInUp 0.8s ease 1s both;
+.btn-loading {
+  pointer-events: none;
+  opacity: 0.7;
 }
 
-.section-title {
-  font-size: 2rem;
-  font-weight: 700;
-  background: var(--secondary-gradient);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  margin-bottom: 2rem;
-  text-align: center;
+.btn-loading i {
+  animation: spin 1s linear infinite;
 }
 
-/* Enhanced Cost Breakdown Display */
-.enhanced-cost-breakdown {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Results Sidebar */
+.results-sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  animation: slideInRight 1s ease-out;
+}
+
+.widget {
+  background: var(--card-bg);
   border-radius: 1.5rem;
-  padding: 2.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(20px);
-  animation: slideIn 0.6s ease-out;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-/* Budget Summary */
-.budget-summary {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-top: 2rem;
-  animation: fadeInUp 0.8s ease 1.2s both;
-}
-
-.summary-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--glass-border);
-  border-radius: 1rem;
-  padding: 1.5rem;
-  text-align: center;
-  backdrop-filter: blur(10px);
+  padding: 2rem;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.summary-card:hover {
+.widget::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.02), transparent);
+  transition: left 0.6s;
+}
+
+.widget:hover::before {
+  left: 100%;
+}
+
+.widget:hover {
   transform: translateY(-5px);
-  border-color: rgba(102, 126, 234, 0.5);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  border-color: rgba(102, 126, 234, 0.3);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
 }
 
-.summary-value {
-  font-size: 2rem;
-  font-weight: 700;
+.widget-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1.5rem;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.widget-title i {
   background: var(--accent-gradient);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  margin-bottom: 0.5rem;
+}
+
+/* Cost Summary Widget */
+.cost-summary {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.05), rgba(244, 87, 108, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.summary-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.summary-item:last-child {
+  border-bottom: none;
+  border-top: 2px solid rgba(102, 126, 234, 0.3);
+  margin-top: 1rem;
+  padding-top: 1.5rem;
 }
 
 .summary-label {
-  font-size: 0.9rem;
   color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 1px;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.summary-value {
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1.1rem;
+}
+
+.summary-item:last-child .summary-value {
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  font-size: 1.3rem;
+}
+
+/* Budget Tips Widget */
+.tips-widget {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.05), rgba(79, 172, 254, 0.05));
+}
+
+.tip-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tip-item:last-child {
+  border-bottom: none;
+}
+
+.tip-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--success-gradient);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 1rem;
+  flex-shrink: 0;
+}
+
+.tip-content {
+  flex: 1;
+}
+
+.tip-title {
   font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.tip-description {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Cost Breakdown Section */
+.cost-breakdown-section {
+  margin-top: 4rem;
+  animation: fadeInUp 0.8s ease 1.2s both;
+}
+
+.cost-breakdown-container {
+  background: var(--card-bg);
+  border-radius: 2rem;
+  border: 1px solid var(--glass-border);
+  backdrop-filter: blur(20px);
+  padding: 3rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.cost-breakdown-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.03), transparent);
+  transition: left 0.8s;
+}
+
+.cost-breakdown-container:hover::before {
+  left: 100%;
 }
 
 /* Responsive Design */
 @media (max-width: 1024px) {
-  .enhanced-budget-container {
-    padding: 2rem;
+  .budget-main-container {
+    grid-template-columns: 1fr;
+    gap: 3rem;
+  }
+  
+  .results-sidebar {
+    order: -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .budget-content {
+    padding: 1rem;
   }
   
   .budget-title {
     font-size: 3rem;
   }
+  
+  .budget-subtitle {
+    font-size: 1.2rem;
+  }
+  
+  .progress-steps {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .progress-line {
+    width: 2px;
+    height: 30px;
+    margin: 0.5rem 0;
+  }
+  
+  .budget-inputs {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .tier-options {
+    grid-template-columns: 1fr;
+  }
+  
+  .budget-actions {
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .action-btn {
+    width: 100%;
+    max-width: 300px;
+    justify-content: center;
+  }
+  
+  .budget-input-section,
+  .cost-breakdown-container {
+    padding: 2rem;
+  }
 }
 
-@media (max-width: 768px) {
-  .enhanced-budget-wrapper {
-    padding: 1rem;
-  }
-  
-  .enhanced-budget-container {
-    padding: 1.5rem;
-    border-radius: 1.5rem;
-  }
-  
+@media (max-width: 480px) {
   .budget-title {
     font-size: 2.5rem;
   }
@@ -398,47 +771,62 @@ const enhancedBudgetStyles = `
     font-size: 1.1rem;
   }
   
-  .budget-controls {
-    grid-template-columns: 1fr;
-    gap: 1.5rem;
-  }
-  
-  .budget-actions {
-    flex-direction: column;
-    align-items: center;
-  }
-  
-  .budget-btn {
-    width: 100%;
-    max-width: 300px;
-    justify-content: center;
-  }
-  
-  .enhanced-cost-breakdown {
-    padding: 1.5rem;
-  }
-}
-
-@media (max-width: 480px) {
-  .budget-title {
-    font-size: 2rem;
-  }
-  
-  .budget-subtitle {
-    font-size: 1rem;
-  }
-  
   .section-title {
     font-size: 1.5rem;
   }
   
-  .budget-summary {
-    grid-template-columns: 1fr;
+  .widget {
+    padding: 1.5rem;
+  }
+}
+
+/* Animation Keyframes */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideInLeft {
+  from {
+    opacity: 0;
+    transform: translateX(-50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(50px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
 `;
 
-// Sample data with multiple budget options
+// Enhanced budget templates with more realistic data
 const budgetTemplates = {
   budget: {
     destination: 'Bali, Indonesia',
@@ -500,22 +888,43 @@ const EnhancedBudgetCalculatorPage: React.FC = () => {
   const [duration, setDuration] = useState(7);
   const [budgetTier, setBudgetTier] = useState('standard');
   const [isCalculating, setIsCalculating] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
+  const particlesRef = useRef<HTMLDivElement>(null);
 
-  const handleCalculate = () => {
-    setIsCalculating(true);
-    
-    // Simulate calculation delay
-    setTimeout(() => {
-      const template = budgetTemplates[budgetTier as keyof typeof budgetTemplates] || budgetTemplates.standard;
-      setCurrentBudget({
-        ...template,
-        destination,
-        num_travelers: travelers,
-        duration,
-        budget_tier: budgetTier,
+  // Generate particles
+  useEffect(() => {
+    if (particlesRef.current) {
+      const particles = Array.from({ length: 20 }, (_, i) => {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.animationDelay = Math.random() * 12 + 's';
+        particle.style.animationDuration = (Math.random() * 8 + 8) + 's';
+        return particle;
       });
-      setIsCalculating(false);
-    }, 1000);
+      
+      particlesRef.current.append(...particles);
+    }
+  }, []);
+
+  const handleCalculate = async () => {
+    setIsCalculating(true);
+    setCurrentStep(2);
+    
+    // Simulate realistic calculation delay
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    const template = budgetTemplates[budgetTier as keyof typeof budgetTemplates] || budgetTemplates.standard;
+    setCurrentBudget({
+      ...template,
+      destination,
+      num_travelers: travelers,
+      duration,
+      budget_tier: budgetTier,
+    });
+    
+    setCurrentStep(3);
+    setIsCalculating(false);
   };
 
   const handleReset = () => {
@@ -524,7 +933,31 @@ const EnhancedBudgetCalculatorPage: React.FC = () => {
     setDuration(7);
     setBudgetTier('standard');
     setCurrentBudget(budgetTemplates.standard);
+    setCurrentStep(1);
   };
+
+  const budgetTips = [
+    {
+      icon: '💡',
+      title: 'Book Early',
+      description: 'Book flights 2-3 months in advance for better prices.'
+    },
+    {
+      icon: '🏨',
+      title: 'Flexible Dates',
+      description: 'Consider traveling mid-week for cheaper accommodation.'
+    },
+    {
+      icon: '🍽️',
+      title: 'Local Eateries',
+      description: 'Eat at local restaurants to save on food costs.'
+    },
+    {
+      icon: '🚌',
+      title: 'Public Transport',
+      description: 'Use public transportation for daily commuting.'
+    }
+  ];
 
   return (
     <>
@@ -537,128 +970,214 @@ const EnhancedBudgetCalculatorPage: React.FC = () => {
           <div className="budget-floating-shape budget-shape-3"></div>
         </div>
 
-        <div className="enhanced-budget-container">
-          {/* Header Section */}
+        {/* Particle System */}
+        <div className="budget-particles" ref={particlesRef}></div>
+
+        <div className="budget-content">
+          {/* Enhanced Header */}
           <div className="budget-header">
             <h1 className="budget-title">AI Budget Calculator</h1>
             <p className="budget-subtitle">
               Plan your perfect trip with our intelligent budget calculator. 
-              Get detailed cost breakdowns and optimize your travel expenses.
+              Get detailed cost breakdowns, personalized recommendations, and optimize your travel expenses.
             </p>
-          </div>
 
-          {/* Budget Controls */}
-          <div className="budget-controls">
-            <div className="budget-control-card">
-              <label className="control-label">
-                <i className="fas fa-map-marker-alt"></i> Destination
-              </label>
-              <input
-                type="text"
-                className="control-input"
-                value={destination}
-                onChange={(e) => setDestination(e.target.value)}
-                placeholder="Where do you want to go?"
-              />
-            </div>
-
-            <div className="budget-control-card">
-              <label className="control-label">
-                <i className="fas fa-users"></i> Travelers
-              </label>
-              <input
-                type="number"
-                className="control-input"
-                value={travelers}
-                onChange={(e) => setTravelers(parseInt(e.target.value) || 1)}
-                min="1"
-                max="10"
-              />
-            </div>
-
-            <div className="budget-control-card">
-              <label className="control-label">
-                <i className="fas fa-calendar-alt"></i> Duration (Days)
-              </label>
-              <input
-                type="number"
-                className="control-input"
-                value={duration}
-                onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
-                min="1"
-                max="30"
-              />
-            </div>
-
-            <div className="budget-control-card">
-              <label className="control-label">
-                <i className="fas fa-coins"></i> Budget Tier
-              </label>
-              <select
-                className="control-select"
-                value={budgetTier}
-                onChange={(e) => setBudgetTier(e.target.value)}
-              >
-                <option value="budget">Budget</option>
-                <option value="standard">Standard</option>
-                <option value="luxury">Luxury</option>
-              </select>
+            {/* Progress Indicator */}
+            <div className="budget-progress">
+              <div className="progress-steps">
+                <div className={`progress-step ${currentStep >= 1 ? 'active' : ''} ${currentStep > 1 ? 'completed' : ''}`}>
+                  <div className="step-circle">1</div>
+                  <div className="step-label">Details</div>
+                </div>
+                <div className={`progress-line ${currentStep > 1 ? 'completed' : ''}`}></div>
+                <div className={`progress-step ${currentStep >= 2 ? 'active' : ''} ${currentStep > 2 ? 'completed' : ''}`}>
+                  <div className="step-circle">2</div>
+                  <div className="step-label">Calculate</div>
+                </div>
+                <div className={`progress-line ${currentStep > 2 ? 'completed' : ''}`}></div>
+                <div className={`progress-step ${currentStep >= 3 ? 'active' : ''} ${currentStep > 3 ? 'completed' : ''}`}>
+                  <div className="step-circle">3</div>
+                  <div className="step-label">Results</div>
+                </div>
+              </div>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="budget-actions">
-            <button 
-              className="budget-btn budget-btn-primary" 
-              onClick={handleCalculate}
-              disabled={isCalculating}
-            >
-              {isCalculating ? (
-                <>
-                  <i className="fas fa-spinner fa-spin"></i>
-                  Calculating...
-                </>
-              ) : (
-                <>
-                  <i className="fas fa-calculator"></i>
-                  Calculate Budget
-                </>
-              )}
-            </button>
-            <button 
-              className="budget-btn budget-btn-outline" 
-              onClick={handleReset}
-            >
-              <i className="fas fa-redo"></i>
-              Reset
-            </button>
+          {/* Main Content */}
+          <div className="budget-main-container">
+            {/* Input Section */}
+            <div className="budget-input-section">
+              <h2 className="section-title">
+                <i className="fas fa-edit"></i>
+                Trip Details
+              </h2>
+
+              <div className="budget-inputs">
+                <div className="input-group">
+                  <label className="input-label">
+                    <i className="fas fa-map-marker-alt"></i>
+                    Destination
+                  </label>
+                  <input
+                    type="text"
+                    className="input-field"
+                    value={destination}
+                    onChange={(e) => setDestination(e.target.value)}
+                    placeholder="Where do you want to go?"
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">
+                    <i className="fas fa-users"></i>
+                    Number of Travelers
+                  </label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={travelers}
+                    onChange={(e) => setTravelers(parseInt(e.target.value) || 1)}
+                    min="1"
+                    max="10"
+                  />
+                </div>
+
+                <div className="input-group">
+                  <label className="input-label">
+                    <i className="fas fa-calendar-alt"></i>
+                    Duration (Days)
+                  </label>
+                  <input
+                    type="number"
+                    className="input-field"
+                    value={duration}
+                    onChange={(e) => setDuration(parseInt(e.target.value) || 1)}
+                    min="1"
+                    max="30"
+                  />
+                </div>
+              </div>
+
+              {/* Budget Tier Selector */}
+              <div className="budget-tier-selector">
+                <label className="input-label">
+                  <i className="fas fa-coins"></i>
+                  Budget Tier
+                </label>
+                <div className="tier-options">
+                  <div 
+                    className={`tier-option ${budgetTier === 'budget' ? 'selected' : ''}`}
+                    onClick={() => setBudgetTier('budget')}
+                  >
+                    <div className="tier-icon">💰</div>
+                    <div className="tier-name">Budget</div>
+                    <div className="tier-description">Basic comfort</div>
+                  </div>
+                  <div 
+                    className={`tier-option ${budgetTier === 'standard' ? 'selected' : ''}`}
+                    onClick={() => setBudgetTier('standard')}
+                  >
+                    <div className="tier-icon">⭐</div>
+                    <div className="tier-name">Standard</div>
+                    <div className="tier-description">Good comfort</div>
+                  </div>
+                  <div 
+                    className={`tier-option ${budgetTier === 'luxury' ? 'selected' : ''}`}
+                    onClick={() => setBudgetTier('luxury')}
+                  >
+                    <div className="tier-icon">👑</div>
+                    <div className="tier-name">Luxury</div>
+                    <div className="tier-description">Premium comfort</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="budget-actions">
+                <button 
+                  className={`action-btn btn-primary ${isCalculating ? 'btn-loading' : ''}`}
+                  onClick={handleCalculate}
+                  disabled={isCalculating}
+                >
+                  {isCalculating ? (
+                    <>
+                      <i className="fas fa-spinner"></i>
+                      Calculating...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fas fa-calculator"></i>
+                      Calculate Budget
+                    </>
+                  )}
+                </button>
+                <button 
+                  className="action-btn btn-secondary"
+                  onClick={handleReset}
+                >
+                  <i className="fas fa-redo"></i>
+                  Reset
+                </button>
+              </div>
+            </div>
+
+            {/* Results Sidebar */}
+            <div className="results-sidebar">
+              {/* Cost Summary Widget */}
+              <div className="widget cost-summary">
+                <h3 className="widget-title">
+                  <i className="fas fa-chart-pie"></i>
+                  Cost Summary
+                </h3>
+                <div className="summary-item">
+                  <span className="summary-label">Flights</span>
+                  <span className="summary-value">${currentBudget.breakdown.flights}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Accommodation</span>
+                  <span className="summary-value">${currentBudget.breakdown.accommodation}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Meals</span>
+                  <span className="summary-value">${currentBudget.breakdown.meals}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Activities</span>
+                  <span className="summary-value">${currentBudget.breakdown.activities}</span>
+                </div>
+                <div className="summary-item">
+                  <span className="summary-label">Total Cost</span>
+                  <span className="summary-value">${currentBudget.total_estimated_cost}</span>
+                </div>
+              </div>
+
+              {/* Budget Tips Widget */}
+              <div className="widget tips-widget">
+                <h3 className="widget-title">
+                  <i className="fas fa-lightbulb"></i>
+                  Money Saving Tips
+                </h3>
+                {budgetTips.map((tip, index) => (
+                  <div key={index} className="tip-item">
+                    <div className="tip-icon">{tip.icon}</div>
+                    <div className="tip-content">
+                      <div className="tip-title">{tip.title}</div>
+                      <div className="tip-description">{tip.description}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
 
           {/* Cost Breakdown Section */}
           <div className="cost-breakdown-section">
-            <h2 className="section-title">Cost Breakdown</h2>
-            <div className="enhanced-cost-breakdown">
+            <h2 className="section-title">
+              <i className="fas fa-chart-bar"></i>
+              Detailed Cost Breakdown
+            </h2>
+            <div className="cost-breakdown-container">
               <CostBreakdownDisplay costBreakdown={currentBudget} />
-            </div>
-          </div>
-
-          {/* Budget Summary */}
-          <div className="budget-summary">
-            <div className="summary-card">
-              <div className="summary-value">${currentBudget.total_estimated_cost}</div>
-              <div className="summary-label">Total Cost</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-value">${Math.round(currentBudget.total_estimated_cost / currentBudget.duration)}</div>
-              <div className="summary-label">Per Day</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-value">${Math.round(currentBudget.total_estimated_cost / currentBudget.num_travelers)}</div>
-              <div className="summary-label">Per Person</div>
-            </div>
-            <div className="summary-card">
-              <div className="summary-value">{currentBudget.budget_tier}</div>
-              <div className="summary-label">Tier</div>
             </div>
           </div>
         </div>
