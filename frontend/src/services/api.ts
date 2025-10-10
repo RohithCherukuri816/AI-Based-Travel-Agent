@@ -25,7 +25,8 @@ export interface ChatRequest {
 export interface ChatResponse {
   success: boolean;
   response: {
-    content: string;
+    content?: string;
+    message?: string;
     type?: string;
     suggestions?: string[];
   };
@@ -66,7 +67,7 @@ class ApiService {
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     const defaultOptions: RequestInit = {
       headers: {
         'Content-Type': 'application/json',
@@ -76,7 +77,7 @@ class ApiService {
 
     try {
       const response = await fetch(url, { ...defaultOptions, ...options });
-      
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.detail || `HTTP ${response.status}: ${response.statusText}`);
@@ -102,7 +103,7 @@ class ApiService {
     if (tripId) {
       params.append('trip_id', tripId);
     }
-    
+
     return this.request<SessionResponse>(`/start_session?${params.toString()}`, {
       method: 'POST',
     });

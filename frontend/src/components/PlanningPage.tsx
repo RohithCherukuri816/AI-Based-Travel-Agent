@@ -633,14 +633,14 @@ const PlanningPage: React.FC = () => {
         user_id: userId,
         message: message,
         session_id: sessionId,
-        current_location: currentLocation ? { 
-          latitude: currentLocation.latitude, 
-          longitude: currentLocation.longitude 
+        current_location: currentLocation ? {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude
         } : undefined,
       });
 
       if (response.success && response.data) {
-        const aiResponseContent = response.data.response.content;
+        const aiResponseContent = response.data.response.content || response.data.response.message || "I'm sorry, I couldn't process your request.";
         let parsedContent: any = {};
         try {
           if (typeof aiResponseContent === 'string' && (aiResponseContent.includes('"Itinerary"') || aiResponseContent.includes('"Cost Breakdown"'))) {
@@ -669,9 +669,9 @@ const PlanningPage: React.FC = () => {
           setCurrentTripId(response.data.context.trip_id);
         }
 
-        if (parsedContent.Itinerary) setPlanningProgress(prev => ({...prev, itinerary: true}));
-        if (parsedContent['Cost Breakdown']) setPlanningProgress(prev => ({...prev, budget: true}));
-        if (parsedContent['Booking Confirmation']) setPlanningProgress(prev => ({...prev, booking: true}));
+        if (parsedContent.Itinerary) setPlanningProgress(prev => ({ ...prev, itinerary: true }));
+        if (parsedContent['Cost Breakdown']) setPlanningProgress(prev => ({ ...prev, budget: true }));
+        if (parsedContent['Booking Confirmation']) setPlanningProgress(prev => ({ ...prev, booking: true }));
 
       } else {
         console.error("Error from AI backend:", response.error);
@@ -694,19 +694,44 @@ const PlanningPage: React.FC = () => {
   const updatePlanningProgress = (message: string) => {
     const lowerMessage = message.toLowerCase();
     if (lowerMessage.includes('destination')) {
-      setPlanningProgress(prev => ({...prev, destination: true}));
+      setPlanningProgress(prev => ({ ...prev, destination: true }));
     }
     if (lowerMessage.includes('preference') || lowerMessage.includes('like') || lowerMessage.includes('want')) {
-      setPlanningProgress(prev => ({...prev, preferences: true}));
+      setPlanningProgress(prev => ({ ...prev, preferences: true }));
     }
   };
 
   const handleSubmitPreferences = async (preferences: any) => {
-    const formatArray = (arr: any) => (Array.isArray(arr) ? arr.join(', ') : arr || '');
+    const formatArray = (arr: any) => {
+      if (Array.isArray(arr)) {
+        return arr.length > 0 ? arr.join(', ') : 'Not specified';
+      }
+      return arr || 'Not specified';
+    };
 
-    const formattedMessage = `My travel preferences are:\n**destination**: ${preferences.destination}\n**destination type**: ${formatArray(preferences.destinationType)}\n**purpose**: ${formatArray(preferences.purpose)}\n**start date**: ${preferences.startDate}\n**end date**: ${preferences.endDate}\n**num travelers**: ${preferences.numTravelers}\n**budget**: ${preferences.budget}\n**accommodation type**: ${formatArray(preferences.accommodationType)}\n**transport mode**: ${formatArray(preferences.transportMode)}\n**special needs**: ${preferences.specialNeeds || 'Please plan my trip!'}`;
+    const formatValue = (value: any) => {
+      if (value === undefined || value === null || value === '') {
+        return 'Not specified';
+      }
+      return value;
+    };
+
+    const formattedMessage = `My travel preferences are:
+**Destination**: ${formatValue(preferences.destination)}
+**Destination Type**: ${formatArray(preferences.destinationType)}
+**Purpose**: ${formatArray(preferences.purpose)}
+**Start Date**: ${formatValue(preferences.startDate)}
+**End Date**: ${formatValue(preferences.endDate)}
+**Number of Travelers**: ${formatValue(preferences.numTravelers)}
+**Budget**: ${formatValue(preferences.budget)}
+**Accommodation Type**: ${formatArray(preferences.accommodationType)}
+**Transport Mode**: ${formatArray(preferences.transportMode)}
+**Special Needs**: ${formatValue(preferences.specialNeeds) || 'Please plan my trip!'}
+
+Please create a detailed travel itinerary based on these preferences.`;
+
     await handleSendMessage(formattedMessage);
-    setPlanningProgress(prev => ({...prev, destination: true, preferences: true}));
+    setPlanningProgress(prev => ({ ...prev, destination: true, preferences: true }));
   };
 
   const handleSubmitFeedback = async (tripId: string, rating: number, comments: string) => {
@@ -715,9 +740,9 @@ const PlanningPage: React.FC = () => {
         user_id: userId,
         message: `/submit_feedback ${tripId} ${rating} ${comments}`,
         session_id: sessionId,
-        current_location: currentLocation ? { 
-          latitude: currentLocation.latitude, 
-          longitude: currentLocation.longitude 
+        current_location: currentLocation ? {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude
         } : undefined,
       });
 
@@ -725,7 +750,7 @@ const PlanningPage: React.FC = () => {
         const aiMessage: Message = {
           id: uuidv4(),
           sender: 'ai',
-          content: response.data.response.content,
+          content: response.data.response.content || response.data.response.message || "I'm sorry, I couldn't process your request.",
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);
         setShowFeedbackForm(false);
@@ -767,7 +792,7 @@ const PlanningPage: React.FC = () => {
                   <TravelForm onSubmitPreferences={handleSubmitPreferences} />
                 </div>
               )}
-              
+
               {messages.length > 1 && (
                 <>
                   <ChatWindow messages={messages.map(msg => {
@@ -796,12 +821,12 @@ const PlanningPage: React.FC = () => {
                       costBreakdown: costBreakdown,
                       bookingConfirmation: bookingConfirmation,
                       content: itinerary ? <ItineraryDisplay itinerary={itinerary} /> :
-                                costBreakdown ? <CostBreakdownDisplay costBreakdown={costBreakdown} /> :
-                                bookingConfirmation ? <BookingConfirmationDisplay confirmation={bookingConfirmation} /> :
-                                generalContent
+                        costBreakdown ? <CostBreakdownDisplay costBreakdown={costBreakdown} /> :
+                          bookingConfirmation ? <BookingConfirmationDisplay confirmation={bookingConfirmation} /> :
+                            generalContent
                     };
                   })} />
-                  
+
                   {isAITyping && (
                     <div className="ai-thinking">
                       <div className="ai-avatar">
@@ -815,7 +840,7 @@ const PlanningPage: React.FC = () => {
                       <span>AI is planning your trip...</span>
                     </div>
                   )}
-                  
+
                   <MessageInput onSendMessage={handleSendMessage} />
                 </>
               )}
@@ -838,7 +863,7 @@ const PlanningPage: React.FC = () => {
                       <div className="step-description">Choose where to go</div>
                     </div>
                   </div>
-                  
+
                   <div className={`progress-step ${planningProgress.preferences ? 'completed' : planningProgress.preferences ? 'active' : ''}`}>
                     <div className={`step-icon ${planningProgress.preferences ? 'completed' : planningProgress.preferences ? 'active' : ''}`}>
                       <i className="fas fa-sliders-h"></i>
@@ -848,7 +873,7 @@ const PlanningPage: React.FC = () => {
                       <div className="step-description">Set your travel style</div>
                     </div>
                   </div>
-                  
+
                   <div className={`progress-step ${planningProgress.itinerary ? 'completed' : ''}`}>
                     <div className={`step-icon ${planningProgress.itinerary ? 'completed' : ''}`}>
                       <i className="fas fa-route"></i>
@@ -858,7 +883,7 @@ const PlanningPage: React.FC = () => {
                       <div className="step-description">Daily plan created</div>
                     </div>
                   </div>
-                  
+
                   <div className={`progress-step ${planningProgress.budget ? 'completed' : ''}`}>
                     <div className={`step-icon ${planningProgress.budget ? 'completed' : ''}`}>
                       <i className="fas fa-chart-pie"></i>
@@ -868,7 +893,7 @@ const PlanningPage: React.FC = () => {
                       <div className="step-description">Cost breakdown ready</div>
                     </div>
                   </div>
-                  
+
                   <div className={`progress-step ${planningProgress.booking ? 'completed' : ''}`}>
                     <div className={`step-icon ${planningProgress.booking ? 'completed' : ''}`}>
                       <i className="fas fa-check-circle"></i>

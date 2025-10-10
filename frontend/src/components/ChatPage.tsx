@@ -966,14 +966,14 @@ const EnhancedChatHeader: React.FC<{
       </div>
     </div>
     <div className="enhanced-header-actions">
-      <button 
+      <button
         className="enhanced-chat-btn new-chat-btn-enhanced"
         onClick={onNewChat}
       >
         <i className="fas fa-plus"></i>
         New Chat
       </button>
-      <button 
+      <button
         className="enhanced-chat-btn delete-chat-btn-enhanced"
         onClick={onDeleteChat}
       >
@@ -997,7 +997,7 @@ const EnhancedChatWindow: React.FC<{ messages: Message[] }> = ({ messages }) => 
     if (React.isValidElement(content)) {
       return content;
     }
-    
+
     return (
       <div className="message-text-content">
         {String(content).split('\n').map((line, index) => (
@@ -1011,24 +1011,23 @@ const EnhancedChatWindow: React.FC<{ messages: Message[] }> = ({ messages }) => 
 
   const formatTime = (timestamp?: Date) => {
     if (!timestamp) return '';
-    return timestamp.toLocaleTimeString('en-US', { 
-      hour: '2-digit', 
+    return timestamp.toLocaleTimeString('en-US', {
+      hour: '2-digit',
       minute: '2-digit',
-      hour12: true 
+      hour12: true
     });
   };
 
   return (
-    <div 
+    <div
       className="enhanced-chat-window"
       ref={chatContainerRef}
     >
       {messages.map((message, index) => (
         <div
           key={message.id}
-          className={`enhanced-message-bubble ${
-            message.sender === 'user' ? 'enhanced-user-message' : 'enhanced-ai-message'
-          } ${index === messages.length - 1 ? 'message-highlight' : ''}`}
+          className={`enhanced-message-bubble ${message.sender === 'user' ? 'enhanced-user-message' : 'enhanced-ai-message'
+            } ${index === messages.length - 1 ? 'message-highlight' : ''}`}
         >
           {renderMessageContent(message.content)}
           {message.timestamp && (
@@ -1038,7 +1037,7 @@ const EnhancedChatWindow: React.FC<{ messages: Message[] }> = ({ messages }) => 
           )}
         </div>
       ))}
-      
+
       {/* Scroll target for auto-scroll */}
       <div ref={messagesEndRef} style={{ height: '1px' }} />
     </div>
@@ -1135,7 +1134,7 @@ const EnhancedChatPage: React.FC = () => {
         particle.style.animationDuration = (Math.random() * 10 + 10) + 's';
         return particle;
       });
-      
+
       particlesRef.current.append(...particles);
     }
   }, []);
@@ -1189,9 +1188,9 @@ const EnhancedChatPage: React.FC = () => {
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
 
-    const userMessage: Message = { 
-      id: uuidv4(), 
-      sender: 'user', 
+    const userMessage: Message = {
+      id: uuidv4(),
+      sender: 'user',
       content: message,
       timestamp: new Date()
     };
@@ -1203,14 +1202,14 @@ const EnhancedChatPage: React.FC = () => {
         user_id: userId,
         message: message,
         session_id: sessionId,
-        current_location: currentLocation ? { 
-          latitude: currentLocation.latitude, 
-          longitude: currentLocation.longitude 
+        current_location: currentLocation ? {
+          latitude: currentLocation.latitude,
+          longitude: currentLocation.longitude
         } : undefined,
       });
 
       if (response.success && response.data) {
-        const aiResponseContent = response.data.response.content;
+        const aiResponseContent = response.data.response.content || response.data.response.message || "I'm sorry, I couldn't process your request.";
         const aiMessage: Message = {
           id: uuidv4(),
           sender: 'ai',
@@ -1222,9 +1221,9 @@ const EnhancedChatPage: React.FC = () => {
         console.error("Error from AI backend:", response.error);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { 
-            id: uuidv4(), 
-            sender: 'ai', 
+          {
+            id: uuidv4(),
+            sender: 'ai',
             content: `I apologize, but I'm having trouble connecting right now. Please try again in a moment.`,
             timestamp: new Date()
           },
@@ -1234,9 +1233,9 @@ const EnhancedChatPage: React.FC = () => {
       console.error("Network error:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { 
-          id: uuidv4(), 
-          sender: 'ai', 
+        {
+          id: uuidv4(),
+          sender: 'ai',
           content: 'I apologize, but I seem to be having connection issues. Please check your internet connection and try again.',
           timestamp: new Date()
         },
@@ -1289,9 +1288,9 @@ const EnhancedChatPage: React.FC = () => {
 
         <div className="chat-content">
           <div className="chat-page-container">
-            <EnhancedChatHeader 
-              onNewChat={() => startNewSession(userId)} 
-              onDeleteChat={handleDeleteChat} 
+            <EnhancedChatHeader
+              onNewChat={() => startNewSession(userId)}
+              onDeleteChat={handleDeleteChat}
             />
             <EnhancedChatWindow messages={messages} />
             {isAITyping && <EnhancedTypingIndicator />}

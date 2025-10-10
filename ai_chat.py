@@ -64,7 +64,7 @@ class SimplifiedAIManager:
             return {
                 "success": True,
                 "response": {
-                    "message": response_text,
+                    "content": response_text,
                     "type": "text",
                     "suggestions": ["Tell me about flights", "Find hotels", "Plan activities", "Check weather"]
                 },
@@ -75,7 +75,7 @@ class SimplifiedAIManager:
             return {
                 "success": False,
                 "response": {
-                    "message": "I'm sorry, I'm having trouble processing your request right now. Please try again.",
+                    "content": "I'm sorry, I'm having trouble processing your request right now. Please try again.",
                     "type": "error"
                 },
                 "error": str(e)
@@ -85,7 +85,11 @@ class SimplifiedAIManager:
         """Generate simple rule-based responses"""
         message_lower = message.lower()
         
-        if any(word in message_lower for word in ["hello", "hi", "hey"]):
+        # Check if this is a travel preferences message from the form
+        if "travel preferences are:" in message_lower or ("destination" in message_lower and "budget" in message_lower and "start date" in message_lower):
+            return "Perfect! I've received your travel preferences. Let me analyze your requirements and create a personalized travel plan for you. Based on your preferences, I'll suggest the best flights, accommodations, activities, and create a detailed itinerary that fits your budget and travel style. Give me a moment to process this information..."
+        
+        elif any(word in message_lower for word in ["hello", "hi", "hey"]):
             return "Hello! I'm your AI travel assistant. I can help you plan amazing trips! Where would you like to go?"
         
         elif any(word in message_lower for word in ["flight", "flights", "fly"]):

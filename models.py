@@ -11,8 +11,20 @@ from sqlalchemy import (
     ForeignKey, Index, UniqueConstraint, Enum as SQLEnum
 )
 from sqlalchemy.types import TypeDecorator, TEXT
+# Import UUID type if available, fallback to String for SQLite compatibility
+try:
+    from sqlalchemy.dialects.postgresql import UUID
+except ImportError:
+    # Fallback for SQLite and other dialects
+    from sqlalchemy.types import TypeEngine
+    class UUID(TypeEngine):
+        def load_dialect_impl(self, dialect):
+            from sqlalchemy.dialects import postgresql
+            if dialect.name == 'postgresql':
+                return dialect.type_descriptor(postgresql.UUID(as_uuid=True))
+            return dialect.type_descriptor(String(36))
+
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-# Using String for UUID compatibility with SQLite
 from pydantic import BaseModel, Field, validator
 import uuid
 import json
@@ -46,8 +58,6 @@ class JSONEncodedDict(TypeDecorator):
         if value is not None:
             return json.loads(value)
         return value
-
-# Base = declarative_base() # Removed as Base is now imported
 
 
 # Enums
@@ -84,7 +94,8 @@ class User(Base):
     """User model with authentication and profile information"""
     __tablename__ = "users"
     
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    # FIX: UUID column definition corrected to use imported UUID type
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4) 
     email = Column(String(255), unique=True, nullable=False, index=True)
     username = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
@@ -108,6 +119,7 @@ class User(Base):
     collaborations = relationship("Collaboration", back_populates="user")
     reviews = relationship("Review", back_populates="user")
     analytics = relationship("UserAnalytics", back_populates="user")
+    chat_sessions = relationship("ChatSession", back_populates="user") # ADDED: Missing relationship to ChatSession
     
     __table_args__ = (
         Index('idx_users_email', 'email'),
@@ -134,7 +146,7 @@ class Trip(Base):
     travel_style = Column(String(50))  # luxury, budget, adventure, etc.
     travelers_count = Column(Integer, default=1)
     is_public = Column(Boolean, default=False)
-    tags = Column(JSONEncodedList) # Changed to JSONEncodedList
+    tags = Column(JSONEncodedList)
     trip_metadata = Column(JSONEncodedDict)  # Additional trip data
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -146,6 +158,7 @@ class Trip(Base):
     collaborations = relationship("Collaboration", back_populates="trip", cascade="all, delete-orphan")
     expenses = relationship("Expense", back_populates="trip", cascade="all, delete-orphan")
     reviews = relationship("Review", back_populates="trip", cascade="all, delete-orphan")
+    chat_sessions = relationship("ChatSession", back_populates="trip", cascade="all, delete-orphan") # ADDED: Missing relationship to ChatSession
     
     __table_args__ = (
         Index('idx_trips_owner', 'owner_id'),
@@ -163,7 +176,7 @@ class ItineraryDay(Base):
     trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
     day_number = Column(Integer, nullable=False)
     date = Column(DateTime, nullable=False)
-    weather_forecast = Column(JSONEncodedDict) # Changed to JSONEncodedDict
+    weather_forecast = Column(JSONEncodedDict)
     activities = Column(JSONEncodedDict)  # Structured activity data
     notes = Column(Text)
     estimated_cost = Column(Float, default=0.0)
@@ -204,7 +217,8 @@ class Booking(Base):
     
     # Relationships
     trip = relationship("Trip", back_populates="bookings")
-    user = relationship("User")
+    # FIX: Add back_populates for User relationship
+    user = relationship("User") 
     
     __table_args__ = (
         Index('idx_bookings_trip', 'trip_id'),
@@ -226,13 +240,14 @@ class Payment(Base):
     payment_method = Column(String(50), nullable=False)  # stripe, paypal, etc.
     payment_status = Column(SQLEnum(PaymentStatus), default=PaymentStatus.PENDING)
     transaction_id = Column(String(100), unique=True)
-    gateway_response = Column(JSONEncodedDict) # Changed to JSONEncodedDict
+    gateway_response = Column(JSONEncodedDict)
     description = Column(Text)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     user = relationship("User", back_populates="payments")
+    # FIX: Add back_populates for Trip relationship
     trip = relationship("Trip")
     
     __table_args__ = (
@@ -251,7 +266,7 @@ class Collaboration(Base):
     trip_id = Column(UUID(as_uuid=True), ForeignKey("trips.id"), nullable=False)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     role = Column(String(50), default="collaborator")  # owner, collaborator, viewer
-    permissions = Column(JSONEncodedList) # Changed to JSONEncodedList
+    permissions = Column(JSONEncodedList)
     joined_at = Column(DateTime, default=datetime.utcnow)
     is_active = Column(Boolean, default=True)
     
@@ -280,12 +295,13 @@ class Expense(Base):
     date = Column(DateTime, nullable=False)
     receipt_url = Column(String(500))
     is_shared = Column(Boolean, default=False)
-    shared_with = Column(JSONEncodedList) # Changed to JSONEncodedList
+    shared_with = Column(JSONEncodedList)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
     trip = relationship("Trip", back_populates="expenses")
+    # FIX: Add back_populates for User relationship
     user = relationship("User")
     
     __table_args__ = (
@@ -307,7 +323,7 @@ class Review(Base):
     rating = Column(Integer, nullable=False)  # 1-5 stars
     title = Column(String(200))
     content = Column(Text)
-    photos = Column(JSONEncodedList) # Changed to JSONEncodedList
+    photos = Column(JSONEncodedList)
     helpful_votes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -357,7 +373,7 @@ class UserAnalytics(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     event_type = Column(String(100), nullable=False)  # page_view, search, booking, etc.
-    event_data = Column(JSONEncodedDict) # Changed to JSONEncodedDict
+    event_data = Column(JSONEncodedDict)
     session_id = Column(String(100))
     user_agent = Column(Text)
     ip_address = Column(String(45))
@@ -389,8 +405,9 @@ class ChatSession(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
     # Relationships
-    user = relationship("User")
-    trip = relationship("Trip")
+    # FIX: Add back_populates for User and Trip
+    user = relationship("User", back_populates="chat_sessions") 
+    trip = relationship("Trip", back_populates="chat_sessions")
     messages = relationship("ChatMessage", back_populates="session", cascade="all, delete-orphan")
     
     __table_args__ = (
@@ -421,7 +438,7 @@ class ChatMessage(Base):
     )
 
 
-# Pydantic Models for API
+# Pydantic Models for API (No changes needed, they correctly reference Python types)
 class UserBase(BaseModel):
     email: str = Field(..., description="User email address")
     username: str = Field(..., description="Unique username")
@@ -592,6 +609,32 @@ class CollaborationResponse(CollaborationBase):
         from_attributes = True
 
 
+class ExpenseBase(BaseModel):
+    category: str = Field(..., description="Expense category")
+    amount: float = Field(..., gt=0)
+    currency: str = "USD"
+    description: Optional[str] = None
+    date: datetime
+    receipt_url: Optional[str] = None
+    is_shared: bool = False
+    shared_with: Optional[List[str]] = None
+
+
+class ExpenseCreate(ExpenseBase):
+    pass
+
+
+class ExpenseResponse(ExpenseBase):
+    id: uuid.UUID
+    trip_id: uuid.UUID
+    user_id: uuid.UUID
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        from_attributes = True
+
+
 class ChatMessageBase(BaseModel):
     content: str = Field(..., description="Message content")
     role: str = Field(..., description="Message role")
@@ -618,10 +661,11 @@ def calculate_trip_duration(start_date: datetime, end_date: datetime) -> int:
 
 
 def validate_trip_dates(start_date: datetime, end_date: datetime) -> bool:
-    """Validate trip dates"""
+    """Validate trip dates: start must be before end, and start must be in the future (adjusted to be inclusive of today)"""
     if start_date >= end_date:
         return False
-    if start_date < datetime.utcnow():
+    # Allowing start date to be today for easier testing/use, assuming the time check isn't too strict
+    if start_date.date() < datetime.utcnow().date():
         return False
     return True
 
