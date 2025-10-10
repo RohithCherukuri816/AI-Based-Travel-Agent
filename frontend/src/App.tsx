@@ -26,6 +26,9 @@ const AppContent = () => {
   
   // Define routes that should not show any navbar
   const noNavbarRoutes = ['/planning-landing'];
+  
+  // Define routes that should not show footer
+  const noFooterRoutes = ['/planning-landing', '/chat', '/budget-calculator', '/planning'];
 
   return (
     <div className="App">
@@ -49,8 +52,8 @@ const AppContent = () => {
         </Routes>
       </main>
 
-      {/* Render the Footer on all pages except landing page */}
-      {!noNavbarRoutes.includes(location.pathname) && <Footer />}
+      {/* Render the Footer on all pages except specified routes */}
+      {!noFooterRoutes.includes(location.pathname) && <Footer />}
     </div>
   );
 };

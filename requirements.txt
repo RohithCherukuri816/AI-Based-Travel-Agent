@@ -23,7 +23,7 @@ torch==2.3.0
 requests==2.32.3
 aiohttp==3.9.5
 httpx==0.25.2
-google-maps-services-python==1.1.5
+googlemaps==4.10.0
 
 # Data Processing
 pandas==2.2.2

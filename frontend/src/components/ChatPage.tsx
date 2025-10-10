@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
+import apiService from '../services/api';
 
-// Inline CSS for the entire app to ensure a cohesive look
-const pageStyles = `
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+// Enhanced CSS with animations and effects matching other pages
+const enhancedChatStyles = `
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@300;400;500&display=swap');
 @import url('https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css');
 
 :root {
@@ -25,60 +26,105 @@ const pageStyles = `
   --shadow-message: 0 4px 16px rgba(0, 0, 0, 0.2);
 }
 
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background: var(--dark-bg);
-  background-image: 
-    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.15) 0%, transparent 60%),
-    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.12) 0%, transparent 60%),
-    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.08) 0%, transparent 60%);
   color: var(--text-primary);
-  line-height: 1.6;
-  min-height: 100vh;
   overflow-x: hidden;
 }
 
+.enhanced-chat-container {
+  min-height: 100vh;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(102, 126, 234, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(247, 37, 133, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(79, 172, 254, 0.05) 0%, transparent 50%);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+}
+
+/* Animated Background Elements */
+.chat-background-elements {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.chat-floating-shape {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--primary-gradient);
+  opacity: 0.1;
+  animation: float 6s ease-in-out infinite;
+}
+
+.chat-shape-1 { width: 200px; height: 200px; top: 10%; left: 5%; animation-delay: 0s; }
+.chat-shape-2 { width: 150px; height: 150px; top: 60%; right: 10%; animation-delay: 2s; }
+.chat-shape-3 { width: 100px; height: 100px; bottom: 20%; left: 15%; animation-delay: 4s; }
+
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-20px) rotate(180deg); }
+}
+
+/* Main Chat Card */
 .chat-page-container {
+  position: relative;
+  z-index: 2;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 120px);
+  height: 85vh;
   width: 100%;
-  max-width: 1000px;
+  max-width: 900px;
   background: var(--card-bg);
   border-radius: 2rem;
   border: 1px solid var(--glass-border);
-  backdrop-filter: blur(25px);
-  box-shadow: var(--shadow-glow), var(--shadow-card);
+  backdrop-filter: blur(20px);
+  box-shadow: 
+    var(--shadow-card),
+    var(--shadow-glow);
   overflow: hidden;
-  margin: 2rem auto;
-  position: relative;
+  animation: slideUp 0.8s ease-out;
 }
 
-.chat-page-container::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
-  pointer-events: none;
-  border-radius: 2rem;
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-.chat-header {
-  background: var(--primary-gradient);
+/* Enhanced Chat Header */
+.enhanced-chat-header {
+  background: linear-gradient(135deg, rgba(102, 126, 234, 0.9), rgba(118, 75, 162, 0.9));
   color: white;
-  padding: 2rem 2.5rem;
+  padding: 2rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  backdrop-filter: blur(10px);
   position: relative;
   overflow: hidden;
-  border-bottom: 1px solid var(--glass-border);
 }
 
-.chat-header::before {
+.enhanced-chat-header::before {
   content: '';
   position: absolute;
   top: 0;
@@ -86,194 +132,353 @@ body {
   width: 100%;
   height: 100%;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  animation: shimmer 3s infinite;
+  transition: left 0.5s;
 }
 
-@keyframes shimmer {
-  0% { left: -100%; }
-  100% { left: 100%; }
+.enhanced-chat-header:hover::before {
+  left: 100%;
 }
-.chat-header-info {
-  display: flex;
-  flex-direction: column;
-}
-.chat-header h1 {
-  font-size: 1.75rem;
+
+.chat-header-info h1 {
+  font-size: 1.8rem;
   font-weight: 700;
+  margin-bottom: 0.5rem;
+  background: linear-gradient(135deg, #ffffff, #e0e7ff);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.chat-header p {
+
+.chat-header-info p {
   font-weight: 400;
-  opacity: 0.8;
-  font-size: 0.9rem;
+  opacity: 0.9;
+  font-size: 0.95rem;
 }
-.new-chat-btn {
-  background: white;
-  color: var(--primary-color);
-  padding: 0.75rem 1.5rem;
-  border-radius: 9999px;
+
+.enhanced-header-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.enhanced-chat-btn {
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
   font-weight: 600;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.3s;
-}
-.new-chat-btn:hover {
-  background: #f0f0f0;
-  transform: scale(1.05);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  backdrop-filter: blur(10px);
+  position: relative;
+  overflow: hidden;
 }
 
-.chat-window {
+.new-chat-btn-enhanced {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.new-chat-btn-enhanced:hover {
+  background: rgba(255, 255, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(255, 255, 255, 0.2);
+}
+
+.delete-chat-btn-enhanced {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fecaca;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.delete-chat-btn-enhanced:hover {
+  background: rgba(239, 68, 68, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 25px rgba(239, 68, 68, 0.2);
+}
+
+/* Enhanced Chat Window */
+.enhanced-chat-window {
   flex: 1;
   overflow-y: auto;
-  padding: 1.5rem;
+  padding: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-}
-.chat-window::-webkit-scrollbar {
-  display: none;
+  gap: 1.5rem;
+  background: 
+    radial-gradient(circle at 100% 100%, rgba(102, 126, 234, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 0% 0%, rgba(247, 37, 133, 0.05) 0%, transparent 50%);
 }
 
-.message-bubble {
-  max-width: 80%;
-  padding: 1.25rem 1.75rem;
+.enhanced-chat-window::-webkit-scrollbar {
+  width: 6px;
+}
+
+.enhanced-chat-window::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 3px;
+}
+
+.enhanced-chat-window::-webkit-scrollbar-thumb {
+  background: var(--primary-gradient);
+  border-radius: 3px;
+}
+
+/* Enhanced Message Bubbles */
+.enhanced-message-bubble {
+  max-width: 70%;
+  padding: 1.2rem 1.8rem;
   border-radius: 1.5rem;
-  animation: messageSlideIn 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: messageSlideIn 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   line-height: 1.6;
   word-wrap: break-word;
   position: relative;
   backdrop-filter: blur(10px);
-  box-shadow: var(--shadow-message);
   border: 1px solid transparent;
-  transition: all 0.3s ease;
 }
 
 @keyframes messageSlideIn {
-  from { 
-    opacity: 0; 
-    transform: translateY(20px) scale(0.95); 
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.95);
   }
-  to { 
-    opacity: 1; 
-    transform: translateY(0) scale(1); 
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
-.user-message {
+.enhanced-user-message {
   background: var(--primary-gradient);
   color: white;
   align-self: flex-end;
   border-bottom-right-radius: 0.5rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  position: relative;
-  overflow: hidden;
+  box-shadow: 
+    0 8px 25px rgba(102, 126, 234, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.user-message::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, transparent 50%);
-  pointer-events: none;
-}
-
-.ai-message {
-  background: var(--card-bg);
+.enhanced-ai-message {
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
   align-self: flex-start;
-  border: 1px solid var(--glass-border);
   border-bottom-left-radius: 0.5rem;
-  position: relative;
-  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    0 8px 25px rgba(0, 0, 0, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.ai-message::before {
-  content: '';
+.enhanced-ai-message::before {
+  content: '🤖';
   position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, transparent 50%);
-  pointer-events: none;
+  left: -40px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  background: var(--secondary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  opacity: 0.8;
 }
 
-.message-bubble:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-glow), var(--shadow-message);
+/* Enhanced Input Area */
+.enhanced-chat-input-container {
+  padding: 2rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  position: relative;
 }
 
-.chat-input-container {
-  padding: 1.5rem 2rem;
-  background: #f8fafc;
-  border-top: 1px solid var(--border-color);
+.enhanced-input-group {
   display: flex;
   gap: 1rem;
   align-items: center;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 50px;
+  padding: 0.5rem;
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
 }
-.chat-input {
+
+.enhanced-input-group:focus-within {
+  border-color: rgba(102, 126, 234, 0.6);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+.enhanced-chat-input {
   flex-grow: 1;
   padding: 1rem 1.5rem;
-  border: 2px solid #ddd;
-  border-radius: 9999px;
+  background: transparent;
+  border: none;
+  color: var(--text-primary);
   font-size: 1rem;
-  transition: all 0.3s;
-}
-.chat-input:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(106, 13, 173, 0.2);
 }
-.chat-input-btn {
-  background: var(--primary-color);
-  color: white;
-  border-radius: 9999px;
+
+.enhanced-chat-input::placeholder {
+  color: var(--text-muted);
+}
+
+.enhanced-input-btn {
   width: 50px;
   height: 50px;
-  font-size: 1.2rem;
+  border-radius: 50%;
   border: none;
   cursor: pointer;
-  transition: background-color 0.3s, transform 0.2s;
+  transition: all 0.3s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  font-size: 1.2rem;
+  position: relative;
+  overflow: hidden;
 }
-.chat-input-btn:hover {
-  background: var(--primary-light);
-  transform: scale(1.05);
+
+.mic-btn {
+  background: var(--secondary-gradient);
+  color: white;
 }
-.ai-typing-indicator {
+
+.mic-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(247, 37, 133, 0.4);
+}
+
+.mic-btn.recording {
+  background: var(--success-gradient);
+  animation: pulse 1.5s infinite;
+}
+
+.send-btn {
+  background: var(--primary-gradient);
+  color: white;
+}
+
+.send-btn:hover {
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.05); }
+}
+
+/* Enhanced Typing Indicator */
+.enhanced-typing-indicator {
   display: flex;
   justify-content: flex-start;
   align-items: center;
-  padding: 0 1.5rem 1.5rem;
-  gap: 0.5rem;
+  padding: 1rem 2rem;
+  gap: 0.8rem;
 }
-.ai-typing-indicator .dot {
-  width: 10px;
-  height: 10px;
-  background-color: #c0c0c0;
+
+.typing-dot {
+  width: 12px;
+  height: 12px;
+  background: var(--accent-gradient);
   border-radius: 50%;
   animation: bounce 1.4s infinite ease-in-out both;
+  box-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
 }
-.ai-typing-indicator .dot:nth-child(1) { animation-delay: -0.32s; }
-.ai-typing-indicator .dot:nth-child(2) { animation-delay: -0.16s; }
+
+.typing-dot:nth-child(1) { animation-delay: -0.32s; }
+.typing-dot:nth-child(2) { animation-delay: -0.16s; }
+
 @keyframes bounce {
-  0%, 80%, 100% { transform: scale(0); }
-  40% { transform: scale(1.0); }
+  0%, 80%, 100% { 
+    transform: scale(0.8);
+    opacity: 0.5;
+  }
+  40% { 
+    transform: scale(1.2);
+    opacity: 1;
+  }
+}
+
+.typing-text {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+/* Message Timestamp */
+.message-timestamp {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  margin-top: 0.5rem;
+  text-align: right;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .enhanced-chat-container {
+    padding: 1rem;
+    height: 90vh;
+  }
+  
+  .chat-page-container {
+    border-radius: 1.5rem;
+  }
+  
+  .enhanced-chat-header {
+    padding: 1.5rem;
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .enhanced-header-actions {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .enhanced-message-bubble {
+    max-width: 85%;
+  }
+  
+  .enhanced-ai-message::before {
+    left: -30px;
+    font-size: 1.2rem;
+  }
+  
+  .enhanced-chat-window {
+    padding: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .enhanced-chat-header h1 {
+    font-size: 1.5rem;
+  }
+  
+  .enhanced-message-bubble {
+    max-width: 90%;
+    padding: 1rem 1.2rem;
+  }
+  
+  .enhanced-input-group {
+    gap: 0.5rem;
+  }
+  
+  .enhanced-input-btn {
+    width: 45px;
+    height: 45px;
+  }
 }
 `;
-
-const API_BASE_URL = 'http://localhost:8000';
 
 interface Message {
   id: string;
   sender: 'user' | 'ai';
   content: string | React.ReactElement;
+  timestamp: Date;
   itinerary?: any;
   costBreakdown?: any;
   bookingConfirmation?: any;
@@ -284,23 +489,24 @@ interface Location {
   longitude: number;
 }
 
-// ChatHeader component integrated into this file
-interface ChatHeaderProps {
+// Enhanced ChatHeader Component
+interface EnhancedChatHeaderProps {
   onNewChat: () => void;
   onDeleteChat: () => void;
 }
-const ChatHeader: React.FC<ChatHeaderProps> = ({ onNewChat, onDeleteChat }) => {
+const EnhancedChatHeader: React.FC<EnhancedChatHeaderProps> = ({ onNewChat, onDeleteChat }) => {
   return (
-    <div className="chat-header">
+    <div className="enhanced-chat-header">
       <div className="chat-header-info">
-        <h1>AI Travel Agent Chat</h1>
+        <h1>AI Travel Agent</h1>
         <p>Your intelligent assistant for travel planning</p>
       </div>
-      <div className="flex gap-2">
-        <button className="new-chat-btn" onClick={onNewChat}>
-          <i className="fas fa-plus"></i> New Chat
+      <div className="enhanced-header-actions">
+        <button className="enhanced-chat-btn new-chat-btn-enhanced" onClick={onNewChat}>
+          <i className="fas fa-plus"></i>
+          New Chat
         </button>
-        <button className="new-chat-btn" onClick={onDeleteChat}>
+        <button className="enhanced-chat-btn delete-chat-btn-enhanced" onClick={onDeleteChat}>
           <i className="fas fa-trash"></i>
         </button>
       </div>
@@ -308,16 +514,24 @@ const ChatHeader: React.FC<ChatHeaderProps> = ({ onNewChat, onDeleteChat }) => {
   );
 };
 
-// ChatWindow component integrated into this file
-interface ChatWindowProps {
+// Enhanced ChatWindow Component
+interface EnhancedChatWindowProps {
   messages: Message[];
 }
-const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
+const EnhancedChatWindow: React.FC<EnhancedChatWindowProps> = ({ messages }) => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
 
   const renderContent = (content: string | React.ReactElement) => {
     if (React.isValidElement(content)) {
@@ -327,13 +541,18 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
   };
 
   return (
-    <div className="chat-window">
+    <div className="enhanced-chat-window">
       {messages.map((message) => (
         <div
           key={message.id}
-          className={`message-bubble ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
+          className={`enhanced-message-bubble ${
+            message.sender === 'user' ? 'enhanced-user-message' : 'enhanced-ai-message'
+          }`}
         >
           {renderContent(message.content)}
+          <div className="message-timestamp">
+            {formatTime(message.timestamp)}
+          </div>
         </div>
       ))}
       <div ref={messagesEndRef} />
@@ -341,11 +560,11 @@ const ChatWindow: React.FC<ChatWindowProps> = ({ messages }) => {
   );
 };
 
-// MessageInput component integrated into this file
-interface MessageInputProps {
+// Enhanced MessageInput Component
+interface EnhancedMessageInputProps {
   onSendMessage: (message: string) => void;
 }
-const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
+const EnhancedMessageInput: React.FC<EnhancedMessageInputProps> = ({ onSendMessage }) => {
   const [input, setInput] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
@@ -399,31 +618,53 @@ const MessageInput: React.FC<MessageInputProps> = ({ onSendMessage }) => {
   };
 
   return (
-    <form className="chat-input-container" onSubmit={handleSubmit}>
-      <button type="button" onClick={toggleRecording} className="chat-input-btn">
-        {isRecording ? <i className="fas fa-stop-circle"></i> : <i className="fas fa-microphone"></i>}
-      </button>
-      <input
-        type="text"
-        value={input}
-        onChange={(e) => setInput(e.target.value)}
-        placeholder={isRecording ? "Listening..." : "Type your message..."}
-        className="chat-input"
-      />
-      <button type="submit" className="chat-input-btn">
-        <i className="fas fa-paper-plane"></i>
-      </button>
-    </form>
+    <div className="enhanced-chat-input-container">
+      <form onSubmit={handleSubmit}>
+        <div className="enhanced-input-group">
+          <button 
+            type="button" 
+            onClick={toggleRecording} 
+            className={`enhanced-input-btn mic-btn ${isRecording ? 'recording' : ''}`}
+          >
+            {isRecording ? <i className="fas fa-stop"></i> : <i className="fas fa-microphone"></i>}
+          </button>
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            placeholder={isRecording ? "Listening... Speak now" : "Ask about destinations, budgets, or travel plans..."}
+            className="enhanced-chat-input"
+            disabled={isRecording}
+          />
+          <button type="submit" className="enhanced-input-btn send-btn" disabled={!input.trim()}>
+            <i className="fas fa-paper-plane"></i>
+          </button>
+        </div>
+      </form>
+    </div>
   );
 };
 
-// Main ChatPage component
-const ChatPage: React.FC = () => {
+// Enhanced Typing Indicator
+const EnhancedTypingIndicator: React.FC = () => {
+  return (
+    <div className="enhanced-typing-indicator">
+      <div className="typing-dot"></div>
+      <div className="typing-dot"></div>
+      <div className="typing-dot"></div>
+      <span className="typing-text">AI is thinking...</span>
+    </div>
+  );
+};
+
+// Main Enhanced ChatPage Component
+const EnhancedChatPage: React.FC = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: uuidv4(),
       sender: 'ai',
-      content: "Hello! I'm TravelBot, your AI travel agent. How can I assist you today?",
+      content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
+      timestamp: new Date(),
     },
   ]);
   const [userId, setUserId] = useState<string>('');
@@ -462,27 +703,20 @@ const ChatPage: React.FC = () => {
 
   const startNewSession = async (currentUserId: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/start_session?user_id=${currentUserId}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setSessionId(data.session_id);
+      const response = await apiService.startChatSession(currentUserId);
+      if (response.success && response.data) {
+        setSessionId(response.data.session_id);
         setMessages([
           {
             id: uuidv4(),
             sender: 'ai',
-            content: "Hello! I'm TravelBot, your AI travel agent. How can I assist you today?",
+            content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
+            timestamp: new Date(),
           },
         ]);
-        console.log("New session started:", data.session_id);
+        console.log("New session started:", response.data.session_id);
       } else {
-        console.error("Failed to start new session:", data.detail || response.statusText);
+        console.error("Failed to start new session:", response.error);
       }
     } catch (error) {
       console.error("Error starting new session:", error);
@@ -492,44 +726,57 @@ const ChatPage: React.FC = () => {
   const handleSendMessage = async (message: string) => {
     if (!message.trim()) return;
 
-    const userMessage: Message = { id: uuidv4(), sender: 'user', content: message };
+    const userMessage: Message = { 
+      id: uuidv4(), 
+      sender: 'user', 
+      content: message,
+      timestamp: new Date()
+    };
     setMessages((prevMessages) => [...prevMessages, userMessage]);
     setIsAITyping(true);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          message: message,
-          session_id: sessionId,
-          current_location: currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : undefined,
-        }),
+      const response = await apiService.sendChatMessage({
+        user_id: userId,
+        message: message,
+        session_id: sessionId,
+        current_location: currentLocation ? { 
+          latitude: currentLocation.latitude, 
+          longitude: currentLocation.longitude 
+        } : undefined,
       });
-      const data = await response.json();
-      if (response.ok) {
-        const aiResponseContent = data.response.content;
+
+      if (response.success && response.data) {
+        const aiResponseContent = response.data.response.content;
         const aiMessage: Message = {
           id: uuidv4(),
           sender: 'ai',
           content: aiResponseContent,
+          timestamp: new Date(),
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);
       } else {
-        console.error("Error from AI backend:", data.detail || response.statusText);
+        console.error("Error from AI backend:", response.error);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { id: uuidv4(), sender: 'ai', content: `Error: ${data.detail || response.statusText}` },
+          { 
+            id: uuidv4(), 
+            sender: 'ai', 
+            content: `I apologize, but I'm having trouble connecting right now. Please try again in a moment.`,
+            timestamp: new Date()
+          },
         ]);
       }
     } catch (error) {
       console.error("Network error:", error);
       setMessages((prevMessages) => [
         ...prevMessages,
-        { id: uuidv4(), sender: 'ai', content: 'Error: Could not connect to backend.' },
+        { 
+          id: uuidv4(), 
+          sender: 'ai', 
+          content: 'I apologize, but I seem to be having connection issues. Please check your internet connection and try again.',
+          timestamp: new Date()
+        },
       ]);
     } finally {
       setIsAITyping(false);
@@ -539,27 +786,24 @@ const ChatPage: React.FC = () => {
   const handleDeleteChat = async () => {
     if (!sessionId) return;
 
-    // Using console.log instead of window.confirm
     console.log("Attempting to delete chat session...");
 
     try {
-      const response = await fetch(`${API_BASE_URL}/delete_session?session_id=${sessionId}`, {
-        method: 'DELETE',
-      });
+      const response = await apiService.deleteChatSession(sessionId);
 
-      if (response.ok) {
+      if (response.success) {
         setSessionId('');
         setMessages([
           {
             id: uuidv4(),
             sender: 'ai',
-            content: "Hello! I'm TravelBot, your AI travel agent. How can I assist you today?",
+            content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan trips, find destinations, calculate budgets, and create amazing travel experiences! Where would you like to go?",
+            timestamp: new Date(),
           },
         ]);
         console.log("Chat session deleted successfully.");
       } else {
-        const errorData = await response.json();
-        console.error("Failed to delete chat session:", errorData.detail || response.statusText);
+        console.error("Failed to delete chat session:", response.error);
       }
     } catch (error) {
       console.error("Error deleting chat session:", error);
@@ -568,21 +812,28 @@ const ChatPage: React.FC = () => {
 
   return (
     <>
-      <style>{pageStyles}</style>
-      <div className="chat-page-container">
-        <ChatHeader onNewChat={() => startNewSession(userId)} onDeleteChat={handleDeleteChat} />
-        <ChatWindow messages={messages} />
-        {isAITyping && (
-          <div className="ai-typing-indicator">
-            <div className="dot"></div>
-            <div className="dot"></div>
-            <div className="dot"></div>
-          </div>
-        )}
-        <MessageInput onSendMessage={handleSendMessage} />
+      <style>{enhancedChatStyles}</style>
+      <div className="enhanced-chat-container">
+        {/* Animated Background */}
+        <div className="chat-background-elements">
+          <div className="chat-floating-shape chat-shape-1"></div>
+          <div className="chat-floating-shape chat-shape-2"></div>
+          <div className="chat-floating-shape chat-shape-3"></div>
+        </div>
+
+        <div className="chat-page-container">
+          <EnhancedChatHeader 
+            onNewChat={() => startNewSession(userId)} 
+            onDeleteChat={handleDeleteChat} 
+          />
+          <EnhancedChatWindow messages={messages} />
+          {isAITyping && <EnhancedTypingIndicator />}
+          <EnhancedMessageInput onSendMessage={handleSendMessage} />
+        </div>
       </div>
     </>
   );
 };
 
+const ChatPage = EnhancedChatPage;
 export default ChatPage;

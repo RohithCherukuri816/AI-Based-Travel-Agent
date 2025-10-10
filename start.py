@@ -254,6 +254,27 @@ def show_status():
     print("💡 Press Ctrl+C to stop all services")
     print("="*60)
 
+def wait_for_backend(max_attempts=30, delay=1):
+    """Wait for backend to be ready"""
+    import requests
+    
+    print("🔍 Checking backend availability...")
+    for attempt in range(max_attempts):
+        try:
+            response = requests.get("http://localhost:8000/", timeout=2)
+            if response.status_code == 200:
+                print("✅ Backend is ready!")
+                return True
+        except Exception:
+            pass
+        
+        if attempt < max_attempts - 1:
+            print(f"⏳ Waiting for backend... (attempt {attempt + 1}/{max_attempts})")
+            time.sleep(delay)
+    
+    print("❌ Backend failed to start within timeout period")
+    return False
+
 def run_health_check():
     """Run health check on all services"""
     print("\n🏥 Running health check...")
@@ -330,9 +351,16 @@ def main():
         print("❌ Frontend startup failed. Exiting.")
         sys.exit(1)
     
-    # Wait for services to start
-    print("\n⏳ Waiting for services to initialize...")
-    time.sleep(5)
+    # Wait for backend to be ready
+    print("\n⏳ Waiting for backend to initialize...")
+    backend_ready = wait_for_backend()
+    if not backend_ready:
+        print("❌ Backend failed to start properly. Exiting.")
+        sys.exit(1)
+    
+    # Wait a bit more for frontend
+    print("⏳ Starting frontend...")
+    time.sleep(2)
     
     # Show status
     show_status()

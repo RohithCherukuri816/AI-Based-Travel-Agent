@@ -7,6 +7,7 @@ import ItineraryDisplay from './ItineraryDisplay';
 import CostBreakdownDisplay from './CostBreakdownDisplay';
 import BookingConfirmationDisplay from './BookingConfirmationDisplay';
 import FeedbackForm from './FeedbackForm';
+import apiService from '../services/api';
 
 interface Message {
   id: string;
@@ -21,8 +22,6 @@ interface Location {
   latitude: number;
   longitude: number;
 }
-
-const API_BASE_URL = 'http://localhost:8000';
 
 const planningStyles = `
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
@@ -156,13 +155,12 @@ const planningStyles = `
 .widget {
   background: var(--card-bg);
   border-radius: 1.5rem;
-  border: 1px solid var(--glass-border);
-  backdrop-filter: blur(25px);
-  padding: 2rem;
-  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  padding: 1.5rem;
+  transition: all 0.3s ease;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-card);
 }
 
 .widget::before {
@@ -172,15 +170,8 @@ const planningStyles = `
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
-  transition: left 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.widget:hover {
-  transform: translateY(-4px);
-  background: var(--card-hover);
-  box-shadow: var(--shadow-glow), var(--shadow-card);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.02), transparent);
+  transition: left 0.6s;
 }
 
 .widget:hover::before {
@@ -603,17 +594,9 @@ const PlanningPage: React.FC = () => {
 
   const startNewSession = async (currentUserId: string, tripId: string | null) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/start_session?user_id=${currentUserId}${tripId ? `&trip_id=${tripId}` : ''}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-      const data = await response.json();
-      if (response.ok) {
-        setSessionId(data.session_id);
+      const response = await apiService.startChatSession(currentUserId, tripId || undefined);
+      if (response.success && response.data) {
+        setSessionId(response.data.session_id);
         setMessages([
           {
             id: uuidv4(),
@@ -646,21 +629,18 @@ const PlanningPage: React.FC = () => {
     updatePlanningProgress(message);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          user_id: userId,
-          message: message,
-          session_id: sessionId,
-          current_location: currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : undefined,
-        }),
+      const response = await apiService.sendChatMessage({
+        user_id: userId,
+        message: message,
+        session_id: sessionId,
+        current_location: currentLocation ? { 
+          latitude: currentLocation.latitude, 
+          longitude: currentLocation.longitude 
+        } : undefined,
       });
-      const data = await response.json();
-      if (response.ok) {
-        const aiResponseContent = data.response.content;
+
+      if (response.success && response.data) {
+        const aiResponseContent = response.data.response.content;
         let parsedContent: any = {};
         try {
           if (typeof aiResponseContent === 'string' && (aiResponseContent.includes('"Itinerary"') || aiResponseContent.includes('"Cost Breakdown"'))) {
@@ -685,8 +665,8 @@ const PlanningPage: React.FC = () => {
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);
 
-        if (data.context && data.context.trip_id && data.context.trip_id !== currentTripId) {
-          setCurrentTripId(data.context.trip_id);
+        if (response.data.context && response.data.context.trip_id && response.data.context.trip_id !== currentTripId) {
+          setCurrentTripId(response.data.context.trip_id);
         }
 
         if (parsedContent.Itinerary) setPlanningProgress(prev => ({...prev, itinerary: true}));
@@ -694,10 +674,10 @@ const PlanningPage: React.FC = () => {
         if (parsedContent['Booking Confirmation']) setPlanningProgress(prev => ({...prev, booking: true}));
 
       } else {
-        console.error("Error from AI backend:", data.detail || response.statusText);
+        console.error("Error from AI backend:", response.error);
         setMessages((prevMessages) => [
           ...prevMessages,
-          { id: uuidv4(), sender: 'ai', content: `Error: ${data.detail || response.statusText}` },
+          { id: uuidv4(), sender: 'ai', content: `Error: ${response.error}` },
         ]);
       }
     } catch (error) {
@@ -731,22 +711,21 @@ const PlanningPage: React.FC = () => {
 
   const handleSubmitFeedback = async (tripId: string, rating: number, comments: string) => {
     try {
-      const response = await fetch(`${API_BASE_URL}/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          user_id: userId,
-          message: `/submit_feedback ${tripId} ${rating} ${comments}`,
-          session_id: sessionId,
-          current_location: currentLocation ? { latitude: currentLocation.latitude, longitude: currentLocation.longitude } : undefined,
-        }),
+      const response = await apiService.sendChatMessage({
+        user_id: userId,
+        message: `/submit_feedback ${tripId} ${rating} ${comments}`,
+        session_id: sessionId,
+        current_location: currentLocation ? { 
+          latitude: currentLocation.latitude, 
+          longitude: currentLocation.longitude 
+        } : undefined,
       });
-      const data = await response.json();
-      if (response.ok) {
+
+      if (response.success && response.data) {
         const aiMessage: Message = {
           id: uuidv4(),
           sender: 'ai',
-          content: data.response.content,
+          content: response.data.response.content,
         };
         setMessages((prevMessages) => [...prevMessages, aiMessage]);
         setShowFeedbackForm(false);

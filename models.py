@@ -12,7 +12,7 @@ from sqlalchemy import (
 )
 from sqlalchemy.types import TypeDecorator, TEXT
 from sqlalchemy.orm import relationship, Mapped, mapped_column
-from sqlalchemy.dialects.postgresql import UUID # Keep UUID for now as it might be handled differently or replaced later
+# Using String for UUID compatibility with SQLite
 from pydantic import BaseModel, Field, validator
 import uuid
 import json

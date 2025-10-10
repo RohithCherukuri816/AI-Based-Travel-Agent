@@ -28,7 +28,11 @@ app = FastAPI(
 # In a production environment, replace "*" with your frontend's exact origin(s).
 origins = [
     "http://localhost:3000",  # React development server
-    "http://localhost:8000",  # FastAPI development server (if serving frontend from here later)
+    "http://localhost:8000",  # FastAPI development server
+    "http://localhost:8001",  # Frontend server (http.server)
+    "http://127.0.0.1:3000",  # Alternative localhost
+    "http://127.0.0.1:8000",  # Alternative localhost
+    "http://127.0.0.1:8001",  # Alternative localhost
     "*" # Allow all origins for now, for development flexibility. Restrict in production.
 ]
 
@@ -124,6 +128,44 @@ async def delete_chat_session(session_id: str):
     except Exception as e:
         logger.error(f"Error deleting chat session {session_id}: {e}")
         raise HTTPException(status_code=500, detail=f"Failed to delete session: {e}")
+
+# Import travel planning functionality from app.py
+try:
+    from app import (
+        plan_travel, TravelRequest, TravelResponse,
+        get_analytics_dashboard, get_analytics_realtime,
+        search_places, get_destinations
+    )
+    
+    # Add travel planning endpoints
+    @app.post("/api/plan", response_model=TravelResponse, tags=["Travel Planning"])
+    async def plan_travel_endpoint(request: dict):
+        """Plan a complete travel itinerary"""
+        return await plan_travel(request)
+    
+    @app.get("/api/places/search", tags=["Travel Planning"])
+    async def search_places_endpoint(q: str):
+        """Search for destinations and places"""
+        return await search_places(q)
+    
+    @app.get("/api/destinations", tags=["Travel Planning"])
+    async def get_destinations_endpoint():
+        """Get available destinations"""
+        return await get_destinations()
+    
+    @app.get("/api/analytics/dashboard", tags=["Analytics"])
+    async def get_analytics_dashboard_endpoint(time_range: str = "month"):
+        """Get analytics dashboard data"""
+        return await get_analytics_dashboard(time_range)
+    
+    @app.get("/api/analytics/realtime", tags=["Analytics"])
+    async def get_analytics_realtime_endpoint():
+        """Get real-time analytics"""
+        return await get_analytics_realtime()
+        
+except ImportError as e:
+    logger.warning(f"Could not import travel planning features: {e}")
+    logger.warning("Travel planning features will not be available")
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
