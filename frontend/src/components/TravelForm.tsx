@@ -367,16 +367,16 @@ const TravelForm: React.FC<TravelFormProps> = ({ onSubmitPreferences }) => {
       <div className="travel-form-container">
         <h2 className="form-title">Plan Your Trip!</h2>
         <form className="space-y-6" onSubmit={handleSubmit}>
-          
+
           <div className="form-section">
             <label className="form-label">Destination</label>
-            <input 
-              type="text" 
-              value={destination} 
-              onChange={(e) => setDestination(e.target.value)} 
-              placeholder="e.g., Paris, Japan" 
+            <input
+              type="text"
+              value={destination}
+              onChange={(e) => setDestination(e.target.value)}
+              placeholder="e.g., Paris, Japan"
               className="form-input"
-              required 
+              required
             />
           </div>
 
@@ -413,8 +413,24 @@ const TravelForm: React.FC<TravelFormProps> = ({ onSubmitPreferences }) => {
           <div className="form-section">
             <label className="form-label">Dates</label>
             <div className="dates-container">
-              <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} required className="form-input" />
-              <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} required className="form-input" />
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                min={new Date().toISOString().split('T')[0]}
+                required
+                className="form-input"
+                placeholder="Start Date"
+              />
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                min={startDate || new Date().toISOString().split('T')[0]}
+                required
+                className="form-input"
+                placeholder="End Date"
+              />
             </div>
           </div>
 

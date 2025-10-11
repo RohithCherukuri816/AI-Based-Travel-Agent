@@ -186,43 +186,275 @@ def find_hotel_options(destination: str, duration: int, budget: float, travelers
     suitable_hotels.sort(key=lambda x: (-x["rating"], -x["safetyRating"]))
     return suitable_hotels[:3]
 
+async def find_activities_real_time(destination: str, duration: int, preferences: List[str], budget: float) -> List[Dict[str, Any]]:
+    """Find activities using real-time APIs when available"""
+    try:
+        from real_api_config import real_api_manager
+        real_activities = await real_api_manager.get_real_activities(destination, preferences)
+        
+        if real_activities and len(real_activities) >= duration:
+            print(f"✅ Using {len(real_activities)} real-time activities from Google Places API")
+            return real_activities
+        else:
+            print("⚠️ Real-time API returned insufficient data, falling back to enhanced mock data")
+            return find_activities(destination, duration, preferences, budget)
+    except Exception as e:
+        print(f"⚠️ Real-time API error: {e}, using mock data")
+        return find_activities(destination, duration, preferences, budget)
+
 def find_activities(destination: str, duration: int, preferences: List[str], budget: float) -> List[Dict[str, Any]]:
     """Find suitable activities based on destination, preferences, and budget"""
-    destination_keywords = destination.lower().split()
-    suitable_activities = []
-
-    # First, find ALL activities for the destination
-    all_destination_activities = [
-        activity for activity in ACTIVITIES
-        if any(keyword in activity["location"].lower() for keyword in destination_keywords)
-    ]
+    destination_lower = destination.lower()
+    destination_keywords = destination_lower.split()
     
-    # If no activities were found for the destination, return a default set
+    print(f"🔍 Searching activities for destination: {destination}")
+    
+    # First, find ALL activities for the exact destination
+    all_destination_activities = []
+    
+    # Try exact city/country matching first
+    for activity in ACTIVITIES:
+        activity_location = activity["location"].lower()
+        
+        # Exact destination match
+        if destination_lower in activity_location or any(keyword in activity_location for keyword in destination_keywords):
+            all_destination_activities.append(activity)
+            print(f"✅ Found activity: {activity['name']} in {activity['location']}")
+    
+    print(f"📊 Found {len(all_destination_activities)} activities for {destination}")
+    
+    # If no activities found for the specific destination, create generic activities
     if not all_destination_activities:
-        all_destination_activities = [
-            activity for activity in ACTIVITIES
-            if any(keyword in activity["location"].lower() for keyword in ["paris", "london", "new york"])
-        ]
+        print(f"⚠️ No specific activities found for {destination}, generating generic activities...")
+        all_destination_activities = generate_generic_activities(destination, duration * 3)
+    
+    # If still no activities, use a small subset from popular destinations as last resort
+    if not all_destination_activities:
+        print(f"⚠️ Generating fallback activities for {destination}...")
+        popular_activities = [activity for activity in ACTIVITIES if "cultural" in activity.get("tags", [])][:6]
+        # Modify the location to match the requested destination
+        all_destination_activities = []
+        for activity in popular_activities:
+            modified_activity = activity.copy()
+            modified_activity["location"] = destination
+            modified_activity["description"] = f"Explore {destination} and {activity['description'].lower()}"
+            all_destination_activities.append(modified_activity)
+    
+    print(f"📋 Total activities available: {len(all_destination_activities)}")
 
-    # Filter based on preferences and a lenient budget check
+    # We need at least 3 activities per day (morning, afternoon, evening)
+    target_activities = duration * 3
+    
+    # Filter based on preferences with more lenient budget check
     filtered_activities = []
     for activity in all_destination_activities:
-        if any(pref.lower() in activity["tags"] or pref.lower() in activity["category"].lower() for pref in preferences):
-            if activity["price"] <= budget * 0.2:
-                filtered_activities.append(activity)
+        # More lenient preference matching
+        preference_match = not preferences or any(
+            pref.lower() in activity["tags"] or 
+            pref.lower() in activity["category"].lower() or
+            pref.lower() in activity["name"].lower() or
+            pref.lower() in activity["description"].lower()
+            for pref in preferences
+        )
+        
+        # More lenient budget check - allow up to 30% of budget per activity
+        budget_ok = activity["price"] <= budget * 0.3
+        
+        if preference_match and budget_ok:
+            filtered_activities.append(activity)
     
-    # If filtering by preferences leaves us with too few activities, fill with top-rated
-    if len(filtered_activities) < duration:
-        remaining_activities_to_add = duration - len(filtered_activities)
+    # If we still don't have enough, add more activities regardless of preferences
+    if len(filtered_activities) < target_activities:
+        remaining_needed = target_activities - len(filtered_activities)
         all_destination_activities.sort(key=lambda x: (-x["rating"], x["price"]))
-        filtered_activities.extend(all_destination_activities[:remaining_activities_to_add])
+        
+        # Add activities that aren't already in filtered_activities
+        for activity in all_destination_activities:
+            if activity not in filtered_activities and activity["price"] <= budget * 0.4:
+                filtered_activities.append(activity)
+                remaining_needed -= 1
+                if remaining_needed <= 0:
+                    break
+    
+    # If we still don't have enough, duplicate some activities with different times
+    if len(filtered_activities) < target_activities and filtered_activities:
+        original_count = len(filtered_activities)
+        while len(filtered_activities) < target_activities:
+            for i in range(original_count):
+                if len(filtered_activities) >= target_activities:
+                    break
+                # Create a copy with different bestTime
+                activity_copy = filtered_activities[i].copy()
+                times = ["Morning", "Afternoon", "Evening"]
+                activity_copy["bestTime"] = times[len(filtered_activities) % 3]
+                filtered_activities.append(activity_copy)
 
     # Sort the final list by rating and price
     filtered_activities.sort(key=lambda x: (-x["rating"], x["price"]))
     
-    # Return 2 activities per day, ensuring we don't exceed the number available
-    num_to_return = min(duration * 2, len(filtered_activities))
-    return filtered_activities[:num_to_return]
+    return filtered_activities[:target_activities]
+
+def generate_generic_activities(destination: str, count: int) -> List[Dict[str, Any]]:
+    """Generate generic activities for destinations not in our database"""
+    
+    generic_activities = [
+        {
+            "id": f"GEN001_{destination}",
+            "name": f"City Walking Tour of {destination}",
+            "location": destination,
+            "category": "Culture & Sightseeing",
+            "price": 25,
+            "duration": "3 hours",
+            "rating": 4.5,
+            "authenticLocal": True,
+            "safetyRating": 9.0,
+            "tags": ["walking", "cultural", "sightseeing", "local"],
+            "description": f"Explore the heart of {destination} with a guided walking tour covering major landmarks and local culture",
+            "bestTime": "Morning",
+            "crowdLevel": "Medium",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN002_{destination}",
+            "name": f"Local Food Experience in {destination}",
+            "location": destination,
+            "category": "Food & Culture",
+            "price": 45,
+            "duration": "2 hours",
+            "rating": 4.7,
+            "authenticLocal": True,
+            "safetyRating": 9.2,
+            "tags": ["food", "local", "cultural", "authentic"],
+            "description": f"Taste authentic local cuisine and learn about {destination}'s food culture with local food experts",
+            "bestTime": "Afternoon",
+            "crowdLevel": "Small Group",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN003_{destination}",
+            "name": f"Historical Sites of {destination}",
+            "location": destination,
+            "category": "History & Culture",
+            "price": 15,
+            "duration": "4 hours",
+            "rating": 4.4,
+            "authenticLocal": True,
+            "safetyRating": 9.1,
+            "tags": ["history", "cultural", "educational", "heritage"],
+            "description": f"Discover the rich history and heritage of {destination} through its most important historical sites",
+            "bestTime": "Morning",
+            "crowdLevel": "Medium",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN004_{destination}",
+            "name": f"Local Markets & Shopping in {destination}",
+            "location": destination,
+            "category": "Shopping & Culture",
+            "price": 0,
+            "duration": "3 hours",
+            "rating": 4.3,
+            "authenticLocal": True,
+            "safetyRating": 8.9,
+            "tags": ["shopping", "local", "markets", "cultural"],
+            "description": f"Browse local markets and shops in {destination}, perfect for souvenirs and experiencing local life",
+            "bestTime": "Afternoon",
+            "crowdLevel": "High",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN005_{destination}",
+            "name": f"Evening Entertainment in {destination}",
+            "location": destination,
+            "category": "Entertainment & Nightlife",
+            "price": 35,
+            "duration": "3 hours",
+            "rating": 4.2,
+            "authenticLocal": True,
+            "safetyRating": 8.7,
+            "tags": ["entertainment", "nightlife", "local", "evening"],
+            "description": f"Experience {destination}'s evening entertainment scene with local music, dance, or cultural performances",
+            "bestTime": "Evening",
+            "crowdLevel": "Medium",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN006_{destination}",
+            "name": f"Nature & Parks in {destination}",
+            "location": destination,
+            "category": "Nature & Relaxation",
+            "price": 0,
+            "duration": "2 hours",
+            "rating": 4.6,
+            "authenticLocal": True,
+            "safetyRating": 9.3,
+            "tags": ["nature", "parks", "relaxation", "free"],
+            "description": f"Relax and enjoy the natural beauty of {destination} in its parks and green spaces",
+            "bestTime": "Morning",
+            "crowdLevel": "Low",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN007_{destination}",
+            "name": f"Art & Culture Scene in {destination}",
+            "location": destination,
+            "category": "Art & Culture",
+            "price": 20,
+            "duration": "3 hours",
+            "rating": 4.5,
+            "authenticLocal": True,
+            "safetyRating": 9.0,
+            "tags": ["art", "culture", "museums", "galleries"],
+            "description": f"Immerse yourself in {destination}'s art and cultural scene through galleries, museums, and cultural centers",
+            "bestTime": "Afternoon",
+            "crowdLevel": "Low",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN008_{destination}",
+            "name": f"Local Transportation Experience in {destination}",
+            "location": destination,
+            "category": "Local Experience",
+            "price": 10,
+            "duration": "2 hours",
+            "rating": 4.1,
+            "authenticLocal": True,
+            "safetyRating": 8.8,
+            "tags": ["transport", "local", "experience", "authentic"],
+            "description": f"Experience {destination} like a local using public transportation and discovering hidden neighborhoods",
+            "bestTime": "Afternoon",
+            "crowdLevel": "Medium",
+            "seasonal": False
+        },
+        {
+            "id": f"GEN009_{destination}",
+            "name": f"Sunset Views & Photography in {destination}",
+            "location": destination,
+            "category": "Photography & Views",
+            "price": 0,
+            "duration": "2 hours",
+            "rating": 4.8,
+            "authenticLocal": True,
+            "safetyRating": 9.2,
+            "tags": ["photography", "views", "sunset", "free"],
+            "description": f"Capture beautiful sunset views and photograph the best scenic spots in {destination}",
+            "bestTime": "Evening",
+            "crowdLevel": "Low",
+            "seasonal": False
+        }
+    ]
+    
+    # Return the requested number of activities, cycling through if needed
+    result = []
+    for i in range(count):
+        activity = generic_activities[i % len(generic_activities)].copy()
+        if i >= len(generic_activities):
+            # Modify slightly for variety
+            activity["id"] = f"GEN{i+1:03d}_{destination}"
+            activity["name"] = f"Alternative {activity['name']}"
+        result.append(activity)
+    
+    return result
 
 def get_weather_info(destination: str, start_date: str, duration: int) -> Dict[str, Any]:
     """Get weather information for the destination and travel dates"""
@@ -291,42 +523,150 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
     # Sort activities by rating to prioritize better options
     activities.sort(key=lambda x: (-x.get("rating", 0), x.get("price", 0)))
     
-    # Simple distribution of activities
-    activities_by_day = [[] for _ in range(duration)]
-    for i, activity in enumerate(activities):
-        day_index = i % duration
-        activities_by_day[day_index].append(activity)
+    # Remove duplicates based on activity name and location
+    unique_activities = []
+    seen_activities = set()
+    for activity in activities:
+        activity_key = f"{activity.get('name', '')}-{activity.get('location', '')}"
+        if activity_key not in seen_activities:
+            unique_activities.append(activity)
+            seen_activities.add(activity_key)
+    
+    activities = unique_activities
+    
+    # Ensure we have enough unique activities
+    min_activities_needed = duration * 3  # 3 per day (morning, afternoon, evening)
+    if len(activities) < min_activities_needed:
+        print(f"Warning: Only {len(activities)} unique activities available for {duration} days. Some days may have fewer activities.")
     
     start_dt = datetime.fromisoformat(start_date)
     
+    # Create a more intelligent distribution system
+    used_activities = set()
+    
     for day in range(1, duration + 1):
-        day_activities = activities_by_day[day-1]
         day_weather = weather_info.get("forecast", [])
-        weather_condition = day_weather[day-1] if day-1 < len(day_weather) else {"condition": "Unknown", "precipitation": 0}
+        weather_condition = day_weather[day-1] if day-1 < len(day_weather) else {
+            "condition": "Sunny", 
+            "precipitation": 0, 
+            "high": 25, 
+            "low": 15
+        }
         
-        # Filter activities based on weather
-        scheduled_activities = []
-        for activity in day_activities:
-            # Skip outdoor activities if precipitation is high
-            if weather_condition.get("precipitation", 0) > 50 and "outdoor" in activity.get("tags", []):
-                continue
-            scheduled_activities.append(activity)
-
-        # Distribute remaining activities into time slots (morning/afternoon/evening)
+        # Get available activities for this day (not used yet)
+        available_activities = [act for act in activities if act.get('id', act.get('name', '')) not in used_activities]
+        
+        # If we've used all activities, reset the pool but prioritize different categories
+        if len(available_activities) < 3:
+            available_activities = activities.copy()
+            used_activities.clear()
+        
+        # Assign activities to time slots for this day
         morning_activities = []
         afternoon_activities = []
         evening_activities = []
         
-        # Distribute activities based on 'bestTime' and fallback
-        for activity in scheduled_activities:
-            if activity.get("bestTime") == "Morning":
-                morning_activities.append(activity)
-            elif activity.get("bestTime") == "Afternoon":
-                afternoon_activities.append(activity)
-            elif activity.get("bestTime") == "Evening":
-                evening_activities.append(activity)
-            else: # Fallback for activities with no specified time
-                afternoon_activities.append(activity)
+        # Categorize activities by best time and type
+        morning_candidates = [act for act in available_activities if 
+                            act.get("bestTime", "").lower() in ["morning", "early morning"] or
+                            "temple" in act.get("tags", []) or "museum" in act.get("category", "").lower()]
+        
+        afternoon_candidates = [act for act in available_activities if 
+                              act.get("bestTime", "").lower() in ["afternoon", "day"] or
+                              "shopping" in act.get("tags", []) or "sightseeing" in act.get("category", "").lower()]
+        
+        evening_candidates = [act for act in available_activities if 
+                            act.get("bestTime", "").lower() in ["evening", "night"] or
+                            "nightlife" in act.get("tags", []) or "bar" in act.get("tags", [])]
+        
+        # Assign one activity per time slot, ensuring variety
+        activities_for_day = []
+        
+        # Morning activity
+        if morning_candidates:
+            morning_activity = morning_candidates[0].copy()
+            morning_activity["bestTime"] = "Morning"
+            morning_activities.append(morning_activity)
+            activities_for_day.append(morning_activity)
+            used_activities.add(morning_activity.get('id', morning_activity.get('name', '')))
+        
+        # Afternoon activity
+        afternoon_pool = [act for act in available_activities if act.get('id', act.get('name', '')) not in used_activities]
+        if afternoon_candidates:
+            afternoon_activity = next((act for act in afternoon_candidates if act.get('id', act.get('name', '')) not in used_activities), None)
+            if not afternoon_activity and afternoon_pool:
+                afternoon_activity = afternoon_pool[0]
+        elif afternoon_pool:
+            afternoon_activity = afternoon_pool[0]
+        else:
+            afternoon_activity = None
+            
+        if afternoon_activity:
+            afternoon_activity = afternoon_activity.copy()
+            afternoon_activity["bestTime"] = "Afternoon"
+            afternoon_activities.append(afternoon_activity)
+            activities_for_day.append(afternoon_activity)
+            used_activities.add(afternoon_activity.get('id', afternoon_activity.get('name', '')))
+        
+        # Evening activity
+        evening_pool = [act for act in available_activities if act.get('id', act.get('name', '')) not in used_activities]
+        if evening_candidates:
+            evening_activity = next((act for act in evening_candidates if act.get('id', act.get('name', '')) not in used_activities), None)
+            if not evening_activity and evening_pool:
+                evening_activity = evening_pool[0]
+        elif evening_pool:
+            evening_activity = evening_pool[0]
+        else:
+            evening_activity = None
+            
+        if evening_activity:
+            evening_activity = evening_activity.copy()
+            evening_activity["bestTime"] = "Evening"
+            evening_activities.append(evening_activity)
+            activities_for_day.append(evening_activity)
+            used_activities.add(evening_activity.get('id', evening_activity.get('name', '')))
+        
+        # Calculate day cost
+        day_cost = sum(act.get("price", 0) for act in activities_for_day)
+        
+        # Generate diverse travel tips
+        travel_tips = []
+        
+        # Weather-based tips
+        if weather_condition.get("precipitation", 0) > 50:
+            travel_tips.append("Pack an umbrella and waterproof jacket - rain is expected today.")
+        elif weather_condition.get("high", 20) > 30:
+            travel_tips.append("Stay hydrated and wear sunscreen - it's going to be a hot day!")
+        elif weather_condition.get("high", 20) < 10:
+            travel_tips.append("Bundle up warm - temperatures will be quite chilly today.")
+        
+        # Activity-specific tips
+        activity_categories = [act.get("category", "") for act in activities_for_day]
+        if any("food" in cat.lower() for cat in activity_categories):
+            travel_tips.append("Come hungry - you'll be experiencing amazing local cuisine today!")
+        if any("temple" in act.get("tags", []) for act in activities_for_day):
+            travel_tips.append("Dress modestly when visiting temples and religious sites.")
+        if any("nightlife" in act.get("tags", []) for act in activities_for_day):
+            travel_tips.append("The night is young - prepare for an exciting evening out!")
+        
+        # General tips based on day of trip
+        if day == 1:
+            travel_tips.append("Welcome to your adventure! Take it easy on your first day to adjust.")
+        elif day == duration:
+            travel_tips.append("Last day - make it memorable and don't forget to pick up souvenirs!")
+        
+        # Safety alerts
+        for alert in safety_alerts:
+            if alert.get("severity") in ["High", "Medium"]:
+                travel_tips.append(f"Safety Alert: {alert.get('message', 'Stay alert and follow local guidelines.')}")
+        
+        # Ensure we have at least some tips
+        if not travel_tips:
+            travel_tips = [
+                f"Day {day} of your amazing journey - enjoy every moment!",
+                "Try to interact with locals and learn about their culture.",
+                "Don't forget to capture memories with photos and videos."
+            ]
         
         day_schedule = {
             "day": day,
@@ -335,20 +675,10 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
             "morning": morning_activities,
             "afternoon": afternoon_activities,
             "evening": evening_activities,
-            "total_activities": len(scheduled_activities),
-            "estimated_cost": sum(act.get("price", 0) for act in scheduled_activities),
-            "travel_tips": []
+            "total_activities": len(activities_for_day),
+            "estimated_cost": day_cost,
+            "travel_tips": travel_tips
         }
-        
-        # Add travel tips based on weather and safety
-        if weather_condition.get("precipitation", 0) > 50:
-            day_schedule["travel_tips"].append("Bring umbrella and waterproof clothing.")
-        if weather_condition.get("temperature", 20) > 30:
-            day_schedule["travel_tips"].append("Stay hydrated and avoid outdoor activities during peak heat.")
-        
-        for alert in safety_alerts:
-            if alert.get("severity") in ["High", "Medium"]:
-                day_schedule["travel_tips"].append(f"Safety Alert: {alert.get('message', '')}")
         
         itinerary.append(day_schedule)
     
@@ -517,18 +847,45 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
             user_profile.get("travel_style", "balanced")
         )
         
-        activity_options = find_activities(
-            request.destination, 
-            safe_duration, 
-            request.preferences, 
-            safe_budget
-        )
+        # Try real-time activities first, fall back to mock data
+        try:
+            activity_options = await find_activities_real_time(
+                request.destination, 
+                safe_duration, 
+                request.preferences, 
+                safe_budget
+            )
+        except:
+            activity_options = find_activities(
+                request.destination, 
+                safe_duration, 
+                request.preferences, 
+                safe_budget
+            )
         
-        weather_info = get_weather_info(
-            request.destination, 
-            request.start_date, 
-            safe_duration
-        )
+        # Try real-time weather first, fall back to mock data
+        try:
+            from real_api_config import real_api_manager
+            weather_info = await real_api_manager.get_real_weather(
+                request.destination, 
+                request.start_date, 
+                safe_duration
+            )
+            if not weather_info:  # If real API returns empty, use mock
+                weather_info = get_weather_info(
+                    request.destination, 
+                    request.start_date, 
+                    safe_duration
+                )
+            else:
+                print("✅ Using real-time weather data")
+        except Exception as e:
+            print(f"⚠️ Real weather API error: {e}, using mock data")
+            weather_info = get_weather_info(
+                request.destination, 
+                request.start_date, 
+                safe_duration
+            )
         
         # --- CORRECTED COST CALCULATION ---
         flight_cost = flight_options[0]["price"] * safe_travelers if flight_options else 0
