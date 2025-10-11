@@ -125,7 +125,6 @@ class TravelState(BaseModel):
 FLIGHTS, HOTELS, ACTIVITIES, WEATHER = load_mock_data()
 
 # Agent Tools
-@tool
 def analyze_user_preferences(destination: str, preferences: List[str], budget: float, duration: int) -> Dict[str, Any]:
     """Analyze user preferences and determine travel style"""
     travel_style = "balanced"
@@ -145,7 +144,6 @@ def analyze_user_preferences(destination: str, preferences: List[str], budget: f
         "comfort_level": "high" if travel_style == "luxury" else "medium" if travel_style == "balanced" else "basic"
     }
 
-@tool
 def find_flight_options(destination: str, start_date: str, budget: float, travelers: int) -> List[Dict[str, Any]]:
     """Find suitable flight options based on destination and budget"""
     destination_keywords = destination.lower().split()
@@ -164,7 +162,6 @@ def find_flight_options(destination: str, start_date: str, budget: float, travel
     suitable_flights.sort(key=lambda x: (x["price"], -x["safetyRating"]))
     return suitable_flights[:3]
 
-@tool
 def find_hotel_options(destination: str, duration: int, budget: float, travelers: int, travel_style: str) -> List[Dict[str, Any]]:
     """Find suitable hotel options based on destination, budget, and travel style"""
     destination_keywords = destination.lower().split()
@@ -189,7 +186,6 @@ def find_hotel_options(destination: str, duration: int, budget: float, travelers
     suitable_hotels.sort(key=lambda x: (-x["rating"], -x["safetyRating"]))
     return suitable_hotels[:3]
 
-@tool
 def find_activities(destination: str, duration: int, preferences: List[str], budget: float) -> List[Dict[str, Any]]:
     """Find suitable activities based on destination, preferences, and budget"""
     destination_keywords = destination.lower().split()
@@ -228,7 +224,6 @@ def find_activities(destination: str, duration: int, preferences: List[str], bud
     num_to_return = min(duration * 2, len(filtered_activities))
     return filtered_activities[:num_to_return]
 
-@tool
 def get_weather_info(destination: str, start_date: str, duration: int) -> Dict[str, Any]:
     """Get weather information for the destination and travel dates"""
     destination_keywords = destination.lower().split()
@@ -261,7 +256,6 @@ def get_weather_info(destination: str, start_date: str, duration: int) -> Dict[s
         "safety_alerts": []
     }
 
-@tool
 def analyze_budget(flight_cost: float, hotel_cost: float, activity_cost: float, total_budget: float, travelers: int) -> Dict[str, Any]:
     """Analyze budget allocation and provide recommendations"""
     total_cost = flight_cost + hotel_cost + activity_cost
@@ -290,7 +284,6 @@ def analyze_budget(flight_cost: float, hotel_cost: float, activity_cost: float, 
     
     return analysis
 
-@tool
 def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, safety_alerts: List[Dict], start_date: str) -> List[Dict[str, Any]]:
     """Create a day-by-day itinerary with optimal scheduling"""
     itinerary = []
@@ -361,38 +354,11 @@ def create_itinerary(activities: List[Dict], duration: int, weather_info: Dict, 
     
     return itinerary
 
-# LangGraph workflow
+# LangGraph workflow - disabled due to compatibility issues
 def create_travel_workflow():
     """Create the LangGraph workflow for travel planning"""
-    if not LANGGRAPH_AVAILABLE:
-        print("Warning: LangGraph not available, using simplified workflow")
-        return None
-    
-    try:
-        workflow = StateGraph(TravelState)
-        
-        # Define agent nodes (these are essentially functions that operate on the state)
-        workflow.add_node("user_agent", call_analyze_user_preferences)
-        workflow.add_node("flight_agent", call_find_flight_options)
-        workflow.add_node("hotel_agent", call_find_hotel_options)
-        workflow.add_node("activity_agent", call_find_activities)
-        workflow.add_node("weather_agent", call_get_weather_info)
-        workflow.add_node("budget_agent", call_analyze_budget)
-        workflow.add_node("planner_agent", call_create_itinerary)
-        
-        workflow.set_entry_point("user_agent")
-        workflow.add_edge("user_agent", "flight_agent")
-        workflow.add_edge("flight_agent", "hotel_agent")
-        workflow.add_edge("hotel_agent", "activity_agent")
-        workflow.add_edge("activity_agent", "weather_agent")
-        workflow.add_edge("weather_agent", "budget_agent")
-        workflow.add_edge("budget_agent", "planner_agent")
-        workflow.add_edge("planner_agent", END)
-        
-        return workflow.compile()
-    except Exception as e:
-        print(f"Warning: Failed to create LangGraph workflow: {e}")
-        return None
+    print("Using simplified workflow instead of LangGraph")
+    return None
 
 # Agent Executor Functions (Wrappers for the @tool functions to interact with TravelState)
 def call_analyze_user_preferences(state: TravelState) -> TravelState:
@@ -515,56 +481,8 @@ async def plan_travel(request: Dict[str, Any]):
         else:
             req = request
 
-        if travel_workflow is None:
-            return await simplified_travel_planning(req)
-        
-        initial_state = TravelState(
-            user_input={
-                "destination": req.destination,
-                "start_date": req.start_date,
-                "duration": req.duration,
-                "budget": req.budget,
-                "preferences": req.preferences,
-                "travelers": req.travelers,
-                "travel_style": req.travel_style
-            },
-            user_profile={},
-            flight_options=[],
-            hotel_options=[],
-            activity_options=[],
-            weather_info={},
-            safety_alerts=[],
-            budget_analysis={},
-            final_itinerary=[],
-            recommendations=[],
-            errors=[]
-        )
-        
-        result = travel_workflow.invoke(initial_state)
-        
-        itinerary = result.final_itinerary
-        total_cost = result.budget_analysis.get("total_cost", 0)
-        
-        summary = f"Your {req.duration}-day trip to {req.destination} is planned! "
-        summary += f"Total cost: ${total_cost:.2f}. "
-        summary += f"Style: {result.user_profile.get('travel_style', 'balanced').title()}. "
-        summary += f"Budget status: {result.budget_analysis.get('budget_status', 'unknown').replace('_', ' ').title()}."
-        
-        recommendations = []
-        if result.budget_analysis.get("budget_status") == "over_budget":
-            recommendations.append("Consider extending your trip duration to spread costs")
-            recommendations.append("Look for package deals combining flights and hotels")
-        if result.weather_info.get("current", {}).get("temperature", 20) > 30:
-            recommendations.append("Pack light clothing and stay hydrated")
-        if any(alert.get("severity") == "High" for alert in result.safety_alerts):
-            recommendations.append("Check local safety advisories before departure")
-        
-        return TravelResponse(
-            itinerary=itinerary,
-            total_cost=total_cost,
-            summary=summary,
-            recommendations=recommendations
-        )
+        # Always use simplified travel planning
+        return await simplified_travel_planning(req)
         
     except Exception as e:
         print(f"Error in simplified_travel_planning: {e}")

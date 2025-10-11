@@ -6,6 +6,7 @@ import uvicorn
 import logging
 from dotenv import load_dotenv # Import load_dotenv
 import os # Import os to access environment variables
+from contextlib import asynccontextmanager
 
 from ai_chat import chat_endpoint, start_chat_session, get_chat_history, ChatContext
 from database import init_db # Import init_db from your database setup
@@ -18,10 +19,21 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
+    logger.info("Starting up FastAPI application...")
+    init_db()  # Initialize the database when the application starts
+    logger.info("Database initialized.")
+    yield
+    # Shutdown
+    logger.info("Shutting down FastAPI application...")
+
 app = FastAPI(
     title="AI Travel Agent Backend",
     description="Backend for the AI-powered travel planning agent, using FastAPI, LangChain, and LangGraph.",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 # Configure CORS
@@ -64,11 +76,17 @@ class StartSessionResponse(BaseModel):
 class ChatHistoryResponse(BaseModel):
     history: List[Dict[str, Any]]
 
-@app.on_event("startup")
-async def on_startup():
+from contextlib import asynccontextmanager
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup
     logger.info("Starting up FastAPI application...")
     init_db()  # Initialize the database when the application starts
     logger.info("Database initialized.")
+    yield
+    # Shutdown
+    logger.info("Shutting down FastAPI application...")
 
 @app.get("/", tags=["Health Check"])
 async def read_root():

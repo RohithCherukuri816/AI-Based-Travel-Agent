@@ -517,6 +517,145 @@ const planningStyles = `
   }
 }
 
+.travel-plan-display {
+  background: var(--card-bg);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+  padding: 2rem;
+  animation: slideInLeft 0.8s ease-out;
+}
+
+.plan-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.plan-header h2 {
+  font-size: 2rem;
+  font-weight: 700;
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  margin: 0;
+}
+
+.start-over-btn {
+  padding: 0.8rem 1.5rem;
+  border-radius: 50px;
+  background: var(--secondary-gradient);
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.start-over-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(247, 37, 133, 0.4);
+}
+
+.plan-summary {
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 1rem;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.plan-summary h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.total-cost {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--success-gradient);
+  border-radius: 0.8rem;
+  text-align: center;
+  color: white;
+  font-size: 1.2rem;
+}
+
+.itinerary-section, .recommendations-section {
+  margin-bottom: 2rem;
+}
+
+.recommendations-section h3 {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.recommendations-section ul {
+  list-style: none;
+  padding: 0;
+}
+
+.recommendations-section li {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  border-radius: 0.8rem;
+  border-left: 3px solid var(--accent-gradient);
+  color: var(--text-primary);
+}
+
+.error-message {
+  text-align: center;
+  padding: 2rem;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 1rem;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: var(--text-primary);
+}
+
+.error-message i {
+  font-size: 3rem;
+  color: #ef4444;
+  margin-bottom: 1rem;
+}
+
+.retry-btn {
+  padding: 1rem 2rem;
+  border-radius: 50px;
+  background: var(--primary-gradient);
+  color: white;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 1rem;
+}
+
+.retry-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+}
+
+.generating-plan {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 400px;
+  background: var(--card-bg);
+  border-radius: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(20px);
+}
+
 @media (max-width: 768px) {
   .planning-content {
     padding: 1rem;
@@ -534,27 +673,30 @@ const planningStyles = `
     padding: 1rem;
   }
   
-  .chat-message.user .message-content,
-  .chat-message.ai .message-content {
-    max-width: 85%;
+  .plan-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .travel-plan-display {
+    padding: 1.5rem;
   }
 }
 `;
 
 const PlanningPage: React.FC = () => {
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: uuidv4(),
-      sender: 'ai',
-      content: "Hello! I'm TravelBot, your AI travel agent. I can help you plan your dream trip. To start, what is your desired destination?",
-    },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [showForm, setShowForm] = useState<boolean>(true);
+  const [travelPlan, setTravelPlan] = useState<any>(null);
+  const [isGeneratingPlan, setIsGeneratingPlan] = useState<boolean>(false);
   const [userId, setUserId] = useState<string>('');
   const [sessionId, setSessionId] = useState<string>('');
   const [currentTripId, setCurrentTripId] = useState<string | null>(null);
   const [currentLocation, setCurrentLocation] = useState<Location | undefined>(undefined);
   const [showFeedbackForm, setShowFeedbackForm] = useState<boolean>(false);
   const [isAITyping, setIsAITyping] = useState<boolean>(false);
+  const [currentTravelRequest, setCurrentTravelRequest] = useState<any>(null);
   const [planningProgress, setPlanningProgress] = useState({
     destination: false,
     preferences: false,
@@ -702,36 +844,77 @@ const PlanningPage: React.FC = () => {
   };
 
   const handleSubmitPreferences = async (preferences: any) => {
-    const formatArray = (arr: any) => {
-      if (Array.isArray(arr)) {
-        return arr.length > 0 ? arr.join(', ') : 'Not specified';
+    setIsGeneratingPlan(true);
+    setShowForm(false);
+
+    try {
+      // Calculate duration from start and end dates
+      const startDate = new Date(preferences.startDate);
+      const endDate = new Date(preferences.endDate);
+      const duration = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
+
+      // Map budget to numeric value
+      const budgetMap: { [key: string]: number } = {
+        'Budget': 1500,
+        'Standard': 3000,
+        'Luxury': 6000
+      };
+
+      const budgetValue = budgetMap[preferences.budget] || 3000;
+
+      // Format preferences for the travel planning API
+      const travelRequest = {
+        destination: preferences.destination || 'Paris',
+        start_date: preferences.startDate,
+        duration: duration > 0 ? duration : 7,
+        budget: budgetValue,
+        preferences: [
+          ...(preferences.destinationType ? preferences.destinationType.split(', ') : []),
+          ...(preferences.purpose ? preferences.purpose.split(', ') : []),
+          ...(preferences.accommodationType ? preferences.accommodationType.split(', ') : []),
+          ...(preferences.transportMode ? preferences.transportMode.split(', ') : [])
+        ].filter(p => p && p !== 'Not specified'),
+        travelers: preferences.numTravelers || 1,
+        travel_style: preferences.budget?.toLowerCase() || 'standard'
+      };
+
+      // Store the travel request for later use
+      setCurrentTravelRequest(travelRequest);
+
+      // Call the travel planning API directly
+      const response = await apiService.planTravel(travelRequest);
+
+      if (response.success && response.data) {
+        setTravelPlan(response.data);
+        setPlanningProgress({
+          destination: true,
+          preferences: true,
+          itinerary: true,
+          budget: true,
+          booking: false
+        });
+      } else {
+        console.error("Error generating travel plan:", response.error);
+        setTravelPlan({
+          error: "Sorry, I couldn't generate your travel plan. Please try again.",
+          itinerary: [],
+          total_cost: 0,
+          summary: "Plan generation failed",
+          recommendations: []
+        });
       }
-      return arr || 'Not specified';
-    };
-
-    const formatValue = (value: any) => {
-      if (value === undefined || value === null || value === '') {
-        return 'Not specified';
-      }
-      return value;
-    };
-
-    const formattedMessage = `My travel preferences are:
-**Destination**: ${formatValue(preferences.destination)}
-**Destination Type**: ${formatArray(preferences.destinationType)}
-**Purpose**: ${formatArray(preferences.purpose)}
-**Start Date**: ${formatValue(preferences.startDate)}
-**End Date**: ${formatValue(preferences.endDate)}
-**Number of Travelers**: ${formatValue(preferences.numTravelers)}
-**Budget**: ${formatValue(preferences.budget)}
-**Accommodation Type**: ${formatArray(preferences.accommodationType)}
-**Transport Mode**: ${formatArray(preferences.transportMode)}
-**Special Needs**: ${formatValue(preferences.specialNeeds) || 'Please plan my trip!'}
-
-Please create a detailed travel itinerary based on these preferences.`;
-
-    await handleSendMessage(formattedMessage);
-    setPlanningProgress(prev => ({ ...prev, destination: true, preferences: true }));
+    } catch (error) {
+      console.error("Error submitting preferences:", error);
+      setTravelPlan({
+        error: "Sorry, there was an error generating your travel plan. Please try again.",
+        itinerary: [],
+        total_cost: 0,
+        summary: "Plan generation failed",
+        recommendations: []
+      });
+    } finally {
+      setIsGeneratingPlan(false);
+    }
   };
 
   const handleSubmitFeedback = async (tripId: string, rating: number, comments: string) => {
@@ -768,6 +951,19 @@ Please create a detailed travel itinerary based on these preferences.`;
     return Object.keys(planningProgress).length;
   };
 
+  const handleStartOver = () => {
+    setShowForm(true);
+    setTravelPlan(null);
+    setMessages([]);
+    setPlanningProgress({
+      destination: false,
+      preferences: false,
+      itinerary: false,
+      budget: false,
+      booking: false
+    });
+  };
+
   return (
     <>
       <style>{planningStyles}</style>
@@ -787,62 +983,83 @@ Please create a detailed travel itinerary based on these preferences.`;
 
           <div className="planning-main">
             <div className="chat-section">
-              {messages.length === 1 && (
+              {showForm && (
                 <div className="travel-form-container">
                   <TravelForm onSubmitPreferences={handleSubmitPreferences} />
                 </div>
               )}
 
-              {messages.length > 1 && (
-                <>
-                  <ChatWindow messages={messages.map(msg => {
-                    let parsedContent: any = {};
-                    try {
-                      if (typeof msg.content === 'string' && (msg.content.includes('"Itinerary"') || msg.content.includes('"Cost Breakdown"'))) {
-                        const jsonMatch = msg.content.match(/```json\n([\s\S]*?)\n```/);
-                        if (jsonMatch && jsonMatch[1]) {
-                          parsedContent = JSON.parse(jsonMatch[1]);
-                        } else {
-                          parsedContent = JSON.parse(msg.content);
-                        }
-                      }
-                    } catch (e) {
-                      console.error("Error parsing message content as JSON:", e);
-                    }
-
-                    const itinerary = parsedContent.Itinerary || msg.itinerary;
-                    const costBreakdown = parsedContent['Cost Breakdown'] || parsedContent.CostBreakdown || msg.costBreakdown;
-                    const bookingConfirmation = parsedContent['Booking Confirmation'] || parsedContent.BookingConfirmation || msg.bookingConfirmation;
-                    const generalContent = parsedContent["General Content"] || msg.content;
-
-                    return {
-                      ...msg,
-                      itinerary: itinerary,
-                      costBreakdown: costBreakdown,
-                      bookingConfirmation: bookingConfirmation,
-                      content: itinerary ? <ItineraryDisplay itinerary={itinerary} /> :
-                        costBreakdown ? <CostBreakdownDisplay costBreakdown={costBreakdown} /> :
-                          bookingConfirmation ? <BookingConfirmationDisplay confirmation={bookingConfirmation} /> :
-                            generalContent
-                    };
-                  })} />
-
-                  {isAITyping && (
-                    <div className="ai-thinking">
-                      <div className="ai-avatar">
-                        <i className="fas fa-robot"></i>
-                      </div>
-                      <div className="thinking-dots">
-                        <div className="thinking-dot"></div>
-                        <div className="thinking-dot"></div>
-                        <div className="thinking-dot"></div>
-                      </div>
-                      <span>AI is planning your trip...</span>
+              {isGeneratingPlan && (
+                <div className="generating-plan">
+                  <div className="ai-thinking">
+                    <div className="ai-avatar">
+                      <i className="fas fa-robot"></i>
                     </div>
-                  )}
+                    <div className="thinking-dots">
+                      <div className="thinking-dot"></div>
+                      <div className="thinking-dot"></div>
+                      <div className="thinking-dot"></div>
+                    </div>
+                    <span>AI is creating your personalized travel plan...</span>
+                  </div>
+                </div>
+              )}
 
-                  <MessageInput onSendMessage={handleSendMessage} />
-                </>
+              {travelPlan && !isGeneratingPlan && (
+                <div className="travel-plan-display">
+                  <div className="plan-header">
+                    <h2>Your Personalized Travel Plan</h2>
+                    <button className="start-over-btn" onClick={handleStartOver}>
+                      <i className="fas fa-redo"></i>
+                      Plan Another Trip
+                    </button>
+                  </div>
+
+                  {travelPlan.error ? (
+                    <div className="error-message">
+                      <i className="fas fa-exclamation-triangle"></i>
+                      <p>{travelPlan.error}</p>
+                      <button className="retry-btn" onClick={handleStartOver}>
+                        Try Again
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="plan-summary">
+                        <h3>Trip Summary</h3>
+                        <p>{travelPlan.summary}</p>
+                        <div className="total-cost">
+                          <strong>Total Cost: ${travelPlan.total_cost?.toFixed(2) || '0.00'}</strong>
+                        </div>
+                      </div>
+
+                      {travelPlan.itinerary && travelPlan.itinerary.length > 0 && (
+                        <div className="itinerary-section">
+                          <ItineraryDisplay itinerary={{
+                            destination: currentTravelRequest?.destination || 'Unknown',
+                            start_date: currentTravelRequest?.start_date || '',
+                            end_date: currentTravelRequest?.end_date || '',
+                            preferences: currentTravelRequest?.preferences || [],
+                            num_travelers: currentTravelRequest?.travelers || 1,
+                            budget: currentTravelRequest?.travel_style || 'Not specified',
+                            days: travelPlan.itinerary
+                          }} />
+                        </div>
+                      )}
+
+                      {travelPlan.recommendations && travelPlan.recommendations.length > 0 && (
+                        <div className="recommendations-section">
+                          <h3>Recommendations</h3>
+                          <ul>
+                            {travelPlan.recommendations.map((rec: string, index: number) => (
+                              <li key={index}>{rec}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
               )}
             </div>
 
