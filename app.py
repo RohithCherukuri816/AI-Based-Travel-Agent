@@ -144,6 +144,25 @@ def analyze_user_preferences(destination: str, preferences: List[str], budget: f
         "comfort_level": "high" if travel_style == "luxury" else "medium" if travel_style == "balanced" else "basic"
     }
 
+async def find_flight_options_real_time(origin: str, destination: str, start_date: str, budget: float, travelers: int) -> List[Dict[str, Any]]:
+    """Find flight options using real-time APIs"""
+    try:
+        from real_api_config import real_api_manager
+        real_flights = await real_api_manager.get_real_flights(origin, destination, start_date, travelers)
+        
+        if real_flights:
+            # Filter by budget
+            affordable_flights = [f for f in real_flights if f["price"] * travelers <= budget * 0.6]
+            if affordable_flights:
+                print(f"✅ Using {len(affordable_flights)} real-time flights")
+                return affordable_flights[:5]
+        
+        print("⚠️ Real-time flights not available, using mock data")
+        return find_flight_options(destination, start_date, budget, travelers)
+    except Exception as e:
+        print(f"⚠️ Real flight API error: {e}")
+        return find_flight_options(destination, start_date, budget, travelers)
+
 def find_flight_options(destination: str, start_date: str, budget: float, travelers: int) -> List[Dict[str, Any]]:
     """Find suitable flight options based on destination and budget"""
     destination_keywords = destination.lower().split()
@@ -161,6 +180,42 @@ def find_flight_options(destination: str, start_date: str, budget: float, travel
 
     suitable_flights.sort(key=lambda x: (x["price"], -x["safetyRating"]))
     return suitable_flights[:3]
+
+async def find_hotel_options_real_time(destination: str, start_date: str, duration: int, budget: float, travelers: int, travel_style: str) -> List[Dict[str, Any]]:
+    """Find hotel options using real-time APIs"""
+    try:
+        from real_api_config import real_api_manager
+        from datetime import datetime, timedelta
+        
+        start_dt = datetime.fromisoformat(start_date)
+        end_dt = start_dt + timedelta(days=duration)
+        checkout_date = end_dt.strftime("%Y-%m-%d")
+        
+        real_hotels = await real_api_manager.get_real_hotels(destination, start_date, checkout_date, travelers)
+        
+        if real_hotels:
+            # Filter by budget and travel style
+            budget_per_night = budget * 0.4 / duration  # 40% of budget for hotels
+            
+            suitable_hotels = []
+            for hotel in real_hotels:
+                if hotel["price"] <= budget_per_night:
+                    if travel_style == "luxury" and hotel.get("stars", 3) >= 4:
+                        suitable_hotels.append(hotel)
+                    elif travel_style == "budget" and hotel["price"] <= budget_per_night * 0.7:
+                        suitable_hotels.append(hotel)
+                    elif travel_style == "balanced":
+                        suitable_hotels.append(hotel)
+            
+            if suitable_hotels:
+                print(f"✅ Using {len(suitable_hotels)} real-time hotels")
+                return suitable_hotels[:5]
+        
+        print("⚠️ Real-time hotels not available, using mock data")
+        return find_hotel_options(destination, duration, budget, travelers, travel_style)
+    except Exception as e:
+        print(f"⚠️ Real hotel API error: {e}")
+        return find_hotel_options(destination, duration, budget, travelers, travel_style)
 
 def find_hotel_options(destination: str, duration: int, budget: float, travelers: int, travel_style: str) -> List[Dict[str, Any]]:
     """Find suitable hotel options based on destination, budget, and travel style"""
@@ -832,20 +887,41 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
             safe_duration
         )
         
-        flight_options = find_flight_options(
-            request.destination, 
-            request.start_date, 
-            safe_budget, 
-            safe_travelers
-        )
+        # Try real-time flights first
+        try:
+            flight_options = await find_flight_options_real_time(
+                "Your City",  # You can make this dynamic based on user location
+                request.destination, 
+                request.start_date, 
+                safe_budget, 
+                safe_travelers
+            )
+        except:
+            flight_options = find_flight_options(
+                request.destination, 
+                request.start_date, 
+                safe_budget, 
+                safe_travelers
+            )
         
-        hotel_options = find_hotel_options(
-            request.destination, 
-            safe_duration, 
-            safe_budget, 
-            safe_travelers, 
-            user_profile.get("travel_style", "balanced")
-        )
+        # Try real-time hotels first
+        try:
+            hotel_options = await find_hotel_options_real_time(
+                request.destination, 
+                request.start_date,
+                safe_duration, 
+                safe_budget, 
+                safe_travelers, 
+                user_profile.get("travel_style", "balanced")
+            )
+        except:
+            hotel_options = find_hotel_options(
+                request.destination, 
+                safe_duration, 
+                safe_budget, 
+                safe_travelers, 
+                user_profile.get("travel_style", "balanced")
+            )
         
         # Try real-time activities first, fall back to mock data
         try:
@@ -914,11 +990,53 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
         summary += f"Style: {user_profile.get('travel_style', 'balanced').title()}. "
         summary += f"Budget status: {budget_analysis.get('budget_status', 'unknown').replace('_', ' ').title()}."
         
+        # Get real-time local insights and events
+        local_insights = {}
+        local_events = []
+        try:
+            from real_api_config import real_api_manager
+            from datetime import datetime, timedelta
+            
+            # Get local insights
+            local_insights = await real_api_manager.get_real_local_insights(
+                request.destination, 
+                request.preferences
+            )
+            
+            # Get local events
+            start_dt = datetime.fromisoformat(request.start_date)
+            end_dt = start_dt + timedelta(days=safe_duration)
+            local_events = await real_api_manager.get_real_events(
+                request.destination,
+                request.start_date,
+                end_dt.strftime("%Y-%m-%d")
+            )
+            
+            if local_insights:
+                print("✅ Added real-time local insights")
+            if local_events:
+                print(f"✅ Found {len(local_events)} local events")
+                
+        except Exception as e:
+            print(f"⚠️ Error getting local insights: {e}")
+        
+        # Enhanced recommendations with local insights
+        enhanced_recommendations = budget_analysis.get("recommendations", [])
+        
+        if local_insights:
+            if local_insights.get("local_tips"):
+                enhanced_recommendations.extend(local_insights["local_tips"][:3])
+            if local_insights.get("budget_tips"):
+                enhanced_recommendations.extend(local_insights["budget_tips"][:2])
+        
+        if local_events:
+            enhanced_recommendations.append(f"Check out local events: {', '.join([e['name'] for e in local_events[:3]])}")
+        
         return TravelResponse(
             itinerary=itinerary,
             total_cost=budget_analysis["total_cost"],
             summary=summary,
-            recommendations=budget_analysis.get("recommendations", [])
+            recommendations=enhanced_recommendations[:10]  # Limit to 10 recommendations
         )
         
     except Exception as e:
@@ -935,6 +1053,46 @@ async def simplified_travel_planning(request: TravelRequest) -> TravelResponse:
 async def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+@app.get("/api/realtime-status")
+async def realtime_api_status():
+    """Check status of real-time API integrations"""
+    try:
+        from real_api_config import real_api_manager
+        
+        status = {
+            "timestamp": datetime.now().isoformat(),
+            "apis": {
+                "google_places": {
+                    "available": bool(real_api_manager.google_places_key),
+                    "status": "active" if real_api_manager.google_places_key else "not_configured"
+                },
+                "openweather": {
+                    "available": bool(real_api_manager.openweather_key),
+                    "status": "active" if real_api_manager.openweather_key else "not_configured"
+                },
+                "gemini_ai": {
+                    "available": bool(real_api_manager.gemini_model),
+                    "status": "active" if real_api_manager.gemini_model else "not_configured"
+                }
+            },
+            "features": {
+                "real_time_activities": bool(real_api_manager.google_places_key),
+                "real_time_weather": bool(real_api_manager.openweather_key),
+                "ai_powered_flights": bool(real_api_manager.gemini_model),
+                "ai_powered_hotels": bool(real_api_manager.gemini_model),
+                "local_insights": bool(real_api_manager.gemini_model),
+                "smart_chat": bool(real_api_manager.gemini_model)
+            }
+        }
+        
+        return status
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "status": "error"
+        }
 
 @app.get("/api/places/search")
 async def search_places(q: str):
@@ -1057,6 +1215,220 @@ async def get_user_chat_history(user_id: str, session_id: Optional[str] = None):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"History retrieval error: {str(e)}")
 
+# Enhanced Real-time API Endpoints
+@app.post("/api/comprehensive-travel-data")
+async def get_comprehensive_travel_data(request: Dict[str, Any]):
+    """Get comprehensive real-time travel data for all features"""
+    try:
+        from real_api_config import get_comprehensive_travel_data
+        
+        destination = request.get("destination", "")
+        preferences = request.get("preferences", [])
+        start_date = request.get("start_date", "")
+        duration = int(request.get("duration", 1))
+        travelers = int(request.get("travelers", 1))
+        origin = request.get("origin", "Mumbai")
+        
+        if not destination or not start_date:
+            raise HTTPException(status_code=400, detail="Destination and start_date are required")
+        
+        data = await get_comprehensive_travel_data(
+            destination, preferences, start_date, duration, travelers, origin
+        )
+        
+        return {
+            "success": True,
+            "data": data,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Comprehensive data error: {str(e)}")
+
+@app.post("/api/realtime/weather")
+async def get_realtime_weather(request: Dict[str, Any]):
+    """Get real-time weather data"""
+    try:
+        from real_api_config import real_api_manager
+        
+        destination = request.get("destination", "")
+        start_date = request.get("start_date", "")
+        duration = int(request.get("duration", 1))
+        
+        if not destination:
+            raise HTTPException(status_code=400, detail="Destination is required")
+        
+        weather_data = await real_api_manager.get_real_weather(destination, start_date, duration)
+        
+        return {
+            "success": True,
+            "data": weather_data,
+            "source": "openweather_api" if weather_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Weather data error: {str(e)}")
+
+@app.post("/api/realtime/activities")
+async def get_realtime_activities(request: Dict[str, Any]):
+    """Get real-time activities data"""
+    try:
+        from real_api_config import real_api_manager
+        
+        destination = request.get("destination", "")
+        preferences = request.get("preferences", [])
+        
+        if not destination:
+            raise HTTPException(status_code=400, detail="Destination is required")
+        
+        activities_data = await real_api_manager.get_real_activities(destination, preferences)
+        
+        return {
+            "success": True,
+            "data": activities_data,
+            "count": len(activities_data),
+            "source": "google_places_api" if activities_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Activities data error: {str(e)}")
+
+@app.post("/api/realtime/flights")
+async def get_realtime_flights(request: Dict[str, Any]):
+    """Get AI-powered flight data"""
+    try:
+        from real_api_config import real_api_manager
+        
+        origin = request.get("origin", "")
+        destination = request.get("destination", "")
+        departure_date = request.get("departure_date", "")
+        travelers = int(request.get("travelers", 1))
+        
+        if not origin or not destination:
+            raise HTTPException(status_code=400, detail="Origin and destination are required")
+        
+        flights_data = await real_api_manager.get_real_flights(origin, destination, departure_date, travelers)
+        
+        return {
+            "success": True,
+            "data": flights_data,
+            "count": len(flights_data),
+            "source": "gemini_ai" if flights_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Flights data error: {str(e)}")
+
+@app.post("/api/realtime/hotels")
+async def get_realtime_hotels(request: Dict[str, Any]):
+    """Get AI-powered hotel data"""
+    try:
+        from real_api_config import real_api_manager
+        
+        destination = request.get("destination", "")
+        checkin_date = request.get("checkin_date", "")
+        checkout_date = request.get("checkout_date", "")
+        travelers = int(request.get("travelers", 1))
+        
+        if not destination:
+            raise HTTPException(status_code=400, detail="Destination is required")
+        
+        hotels_data = await real_api_manager.get_real_hotels(destination, checkin_date, checkout_date, travelers)
+        
+        return {
+            "success": True,
+            "data": hotels_data,
+            "count": len(hotels_data),
+            "source": "gemini_ai" if hotels_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Hotels data error: {str(e)}")
+
+@app.post("/api/realtime/insights")
+async def get_local_insights(request: Dict[str, Any]):
+    """Get AI-powered local insights"""
+    try:
+        from real_api_config import real_api_manager
+        
+        destination = request.get("destination", "")
+        preferences = request.get("preferences", [])
+        
+        if not destination:
+            raise HTTPException(status_code=400, detail="Destination is required")
+        
+        insights_data = await real_api_manager.get_real_local_insights(destination, preferences)
+        
+        return {
+            "success": True,
+            "data": insights_data,
+            "source": "gemini_ai" if insights_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Local insights error: {str(e)}")
+
+@app.post("/api/realtime/events")
+async def get_local_events(request: Dict[str, Any]):
+    """Get AI-powered local events"""
+    try:
+        from real_api_config import real_api_manager
+        
+        destination = request.get("destination", "")
+        start_date = request.get("start_date", "")
+        end_date = request.get("end_date", "")
+        
+        if not destination:
+            raise HTTPException(status_code=400, detail="Destination is required")
+        
+        events_data = await real_api_manager.get_real_events(destination, start_date, end_date)
+        
+        return {
+            "success": True,
+            "data": events_data,
+            "count": len(events_data),
+            "source": "gemini_ai" if events_data else "mock_data"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Local events error: {str(e)}")
+
+@app.get("/api/test-connectivity")
+async def test_api_connectivity():
+    """Test connectivity to all real-time APIs"""
+    try:
+        from real_api_config import get_real_time_status
+        status = await get_real_time_status()
+        return status
+    except Exception as e:
+        return {
+            "error": str(e),
+            "timestamp": datetime.now().isoformat(),
+            "status": "error"
+        }
+
+@app.get("/api/usage-stats")
+async def get_api_usage_stats():
+    """Get API usage statistics"""
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "endpoints": {
+            "travel_planning": "active",
+            "real_time_weather": "active",
+            "real_time_activities": "active",
+            "ai_flights": "active",
+            "ai_hotels": "active",
+            "local_insights": "active",
+            "chat_system": "active"
+        },
+        "features_enabled": {
+            "google_places_integration": bool(os.getenv("GOOGLE_PLACES_API_KEY")),
+            "openweather_integration": bool(os.getenv("OPENWEATHER_API_KEY")),
+            "gemini_ai_integration": bool(os.getenv("GOOGLE_AI_API_KEY")),
+            "real_time_chat": True,
+            "comprehensive_planning": True
+        }
+    }
 
 if __name__ == "__main__":
     import uvicorn

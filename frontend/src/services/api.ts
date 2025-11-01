@@ -156,6 +156,116 @@ class ApiService {
   async healthCheck(): Promise<ApiResponse<any>> {
     return this.request('/');
   }
+
+  // Real-time API status
+  async getRealTimeStatus(): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime-status');
+  }
+
+  // Enhanced Real-time Data Methods
+  async getComprehensiveTravelData(params: {
+    destination: string;
+    preferences: string[];
+    start_date: string;
+    duration: number;
+    travelers?: number;
+    origin?: string;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/api/comprehensive-travel-data', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getRealTimeWeather(destination: string, startDate: string, duration: number): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/weather', {
+      method: 'POST',
+      body: JSON.stringify({
+        destination,
+        start_date: startDate,
+        duration
+      }),
+    });
+  }
+
+  async getRealTimeActivities(destination: string, preferences: string[]): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/activities', {
+      method: 'POST',
+      body: JSON.stringify({
+        destination,
+        preferences
+      }),
+    });
+  }
+
+  async getRealTimeFlights(params: {
+    origin: string;
+    destination: string;
+    departure_date: string;
+    travelers?: number;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/flights', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getRealTimeHotels(params: {
+    destination: string;
+    checkin_date: string;
+    checkout_date: string;
+    travelers?: number;
+  }): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/hotels', {
+      method: 'POST',
+      body: JSON.stringify(params),
+    });
+  }
+
+  async getLocalInsights(destination: string, preferences: string[]): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/insights', {
+      method: 'POST',
+      body: JSON.stringify({
+        destination,
+        preferences
+      }),
+    });
+  }
+
+  async getLocalEvents(destination: string, startDate: string, endDate: string): Promise<ApiResponse<any>> {
+    return this.request('/api/realtime/events', {
+      method: 'POST',
+      body: JSON.stringify({
+        destination,
+        start_date: startDate,
+        end_date: endDate
+      }),
+    });
+  }
+
+  // Enhanced Chat API with real-time context
+  async sendEnhancedChatMessage(request: ChatRequest & {
+    travel_context?: {
+      destination?: string;
+      preferences?: string[];
+      budget?: number;
+      dates?: string[];
+    };
+  }): Promise<ApiResponse<ChatResponse>> {
+    return this.request<ChatResponse>('/api/chat/message', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  }
+
+  // API connectivity tests
+  async testApiConnectivity(): Promise<ApiResponse<any>> {
+    return this.request('/api/test-connectivity');
+  }
+
+  async getApiUsageStats(): Promise<ApiResponse<any>> {
+    return this.request('/api/usage-stats');
+  }
 }
 
 // Create and export a singleton instance

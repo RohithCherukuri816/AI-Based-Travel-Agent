@@ -14,6 +14,7 @@ import Footer from './components/Footer';
 import AboutDeveloperPage from './components/AboutDeveloperPage';
 import BudgetCalculatorPage from './components/BudgetCalculatorPage';
 import PlanningLandingPage from './components/PlanningLandingPage'; // Add this import
+import RealTimeStatus from './components/RealTimeStatus';
 
 import './App.css';
 
@@ -54,6 +55,9 @@ const AppContent = () => {
 
       {/* Render the Footer on all pages except specified routes */}
       {!noFooterRoutes.includes(location.pathname) && <Footer />}
+      
+      {/* Real-Time API Status Indicator */}
+      <RealTimeStatus />
     </div>
   );
 };
