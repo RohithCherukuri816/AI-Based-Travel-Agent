@@ -13,7 +13,7 @@ import PlanningPage from './components/PlanningPage';
 import Footer from './components/Footer';
 import AboutDeveloperPage from './components/AboutDeveloperPage';
 import BudgetCalculatorPage from './components/BudgetCalculatorPage';
-import PlanningLandingPage from './components/PlanningLandingPage'; // Add this import
+
 import RealTimeStatus from './components/RealTimeStatus';
 
 import './App.css';
@@ -24,12 +24,12 @@ const AppContent = () => {
 
   // Define which routes should use the planning navbar
   const isPlanningRoute = location.pathname === '/planning' || location.pathname === '/chat' || location.pathname === '/budget-calculator';
-  
+
   // Define routes that should not show any navbar
-  const noNavbarRoutes = ['/planning-landing'];
-  
+  const noNavbarRoutes: string[] = [];
+
   // Define routes that should not show footer
-  const noFooterRoutes = ['/planning-landing', '/chat', '/budget-calculator', '/planning'];
+  const noFooterRoutes = ['/chat', '/budget-calculator', '/planning'];
 
   return (
     <div className="App">
@@ -42,7 +42,7 @@ const AppContent = () => {
       <main className="main-content">
         <Routes>
           <Route path="/" element={<HeroSection />} />
-          <Route path="/planning-landing" element={<PlanningLandingPage />} />
+
           <Route path="/features" element={<FeaturesSection />} />
           <Route path="/about-developer" element={<AboutDeveloperPage />} />
           <Route path="/pricing" element={<PricingSection />} />
@@ -55,7 +55,7 @@ const AppContent = () => {
 
       {/* Render the Footer on all pages except specified routes */}
       {!noFooterRoutes.includes(location.pathname) && <Footer />}
-      
+
       {/* Real-Time API Status Indicator */}
       <RealTimeStatus />
     </div>

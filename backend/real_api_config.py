@@ -50,6 +50,136 @@ class RealTimeAPIManager:
             print("ℹ️ Google AI API key not configured")
             self.gemini_model = None
     
+    async def get_nearby_places(self, latitude: float, longitude: float, place_type: str = "tourist_attraction", radius: int = 5000) -> List[Dict[str, Any]]:
+        """Get nearby places based on user's current location using Google Places API"""
+        print(f"🔑 Google Places API key available: {bool(self.google_places_key)}")
+        if not self.google_places_key or self.google_places_key == "":
+            print("❌ Google Places API key not configured for nearby search - returning mock data")
+            # Return mock data for testing
+            return [
+                {
+                    "id": "mock_1",
+                    "name": "Local Tourist Attraction",
+                    "location": "Near your location",
+                    "category": "Tourist Attraction",
+                    "price": 15,
+                    "rating": 4.5,
+                    "description": f"A popular {place_type.replace('_', ' ')} near your current location",
+                    "tags": [place_type, "nearby", "local"],
+                    "bestTime": "Anytime",
+                    "authenticLocal": True,
+                    "safetyRating": 9.0,
+                    "distance": 1.2
+                },
+                {
+                    "id": "mock_2",
+                    "name": "Nearby Local Spot",
+                    "location": "Close to you",
+                    "category": "Local Attraction",
+                    "price": 0,
+                    "rating": 4.2,
+                    "description": f"A great local {place_type.replace('_', ' ')} that's worth visiting",
+                    "tags": [place_type, "nearby", "free"],
+                    "bestTime": "Morning",
+                    "authenticLocal": True,
+                    "safetyRating": 8.8,
+                    "distance": 2.1
+                },
+                {
+                    "id": "mock_1",
+                    "name": "Local Attraction (Mock)",
+                    "location": "Near your location",
+                    "category": "Tourist Attraction",
+                    "price": 0,
+                    "rating": 4.5,
+                    "description": "A beautiful local attraction near your area (mock data - configure Google Places API for real results)",
+                    "tags": ["mock", "nearby", "local"],
+                    "bestTime": "Anytime",
+                    "authenticLocal": True,
+                    "safetyRating": 9.0,
+                    "distance": 1.2
+                },
+                {
+                    "id": "mock_2", 
+                    "name": "Popular Spot (Mock)",
+                    "location": "Your neighborhood",
+                    "category": "Point of Interest",
+                    "price": 0,
+                    "rating": 4.2,
+                    "description": "A popular local spot worth visiting (mock data - configure Google Places API for real results)",
+                    "tags": ["mock", "nearby", "popular"],
+                    "bestTime": "Anytime",
+                    "authenticLocal": True,
+                    "safetyRating": 8.8,
+                    "distance": 2.1
+                }
+            ]
+        
+        try:
+            print(f"🔍 Searching nearby {place_type} within {radius}m of location ({latitude}, {longitude})...")
+            
+            # Google Places Nearby Search API
+            base_url = "https://maps.googleapis.com/maps/api/place/nearbysearch/json"
+            
+            params = {
+                "location": f"{latitude},{longitude}",
+                "radius": radius,
+                "type": place_type,
+                "key": self.google_places_key,
+                "fields": "place_id,name,rating,price_level,types,vicinity,geometry"
+            }
+            
+            response = requests.get(base_url, params=params, timeout=10)
+            if response.status_code == 200:
+                data = response.json()
+                nearby_places = []
+                
+                for place in data.get("results", [])[:10]:  # Top 10 nearby places
+                    place_info = {
+                        "id": place.get("place_id", ""),
+                        "name": place.get("name", ""),
+                        "location": place.get("vicinity", "Nearby"),
+                        "category": self._categorize_place(place, place_type),
+                        "price": self._estimate_price(place, place_type),
+                        "rating": place.get("rating", 4.0),
+                        "description": f"Nearby {place_type.replace('_', ' ')} - {place.get('name', 'Unknown')}",
+                        "tags": [place_type, "nearby", "local"],
+                        "bestTime": "Anytime",
+                        "authenticLocal": True,
+                        "safetyRating": 9.0,
+                        "distance": self._calculate_distance(latitude, longitude, place.get("geometry", {}).get("location", {}))
+                    }
+                    nearby_places.append(place_info)
+                
+                # Sort by rating and distance
+                nearby_places.sort(key=lambda x: (-x["rating"], x.get("distance", 999)))
+                print(f"✅ Found {len(nearby_places)} nearby places")
+                return nearby_places
+            else:
+                print(f"❌ Google Places API error: {response.status_code}")
+                return []
+                
+        except Exception as e:
+            print(f"Error fetching nearby places: {e}")
+            return []
+
+    def _calculate_distance(self, lat1: float, lon1: float, location: Dict) -> float:
+        """Calculate approximate distance in km between two points"""
+        try:
+            lat2 = location.get("lat", 0)
+            lon2 = location.get("lng", 0)
+            
+            # Simple distance calculation (not perfectly accurate but good enough)
+            import math
+            dlat = math.radians(lat2 - lat1)
+            dlon = math.radians(lon2 - lon1)
+            a = math.sin(dlat/2) * math.sin(dlat/2) + math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon/2) * math.sin(dlon/2)
+            c = 2 * math.atan2(math.sqrt(a), math.sqrt(1-a))
+            distance = 6371 * c  # Earth's radius in km
+            return round(distance, 2)
+        except:
+            return 999  # Return large number if calculation fails
+
     async def get_real_activities(self, destination: str, preferences: List[str]) -> List[Dict[str, Any]]:
         """Get real activities from Google Places API"""
         if not self.google_places_key or self.google_places_key == "":

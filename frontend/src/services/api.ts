@@ -110,6 +110,7 @@ class ApiService {
   }
 
   async sendChatMessage(request: ChatRequest): Promise<ApiResponse<ChatResponse>> {
+    console.log('🚀 Sending chat message:', request);
     return this.request<ChatResponse>('/chat', {
       method: 'POST',
       body: JSON.stringify(request),
@@ -118,11 +119,11 @@ class ApiService {
 
   async getChatHistory(userId: string, sessionId?: string): Promise<ApiResponse<any>> {
     const params = sessionId ? `?session_id=${sessionId}` : '';
-    return this.request(`/history/${userId}${params}`);
+    return this.request(`/api/chat/history/${userId}${params}`);
   }
 
   async deleteChatSession(sessionId: string): Promise<ApiResponse<any>> {
-    return this.request(`/delete_session?session_id=${sessionId}`, {
+    return this.request(`/api/chat/delete_session?session_id=${sessionId}`, {
       method: 'DELETE',
     });
   }

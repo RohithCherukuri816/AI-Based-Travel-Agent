@@ -1,5 +1,8 @@
 <div align="center">
 
+<!-- Animated Banner Header -->
+<img src="https://capsule-render.vercel.app/api?type=waving&color=gradient&height=300&section=header&text=AI%20Travel%20Agent&fontSize=60&fontAlignY=38&animation=fadeIn&desc=Multi-Agent%20Intelligence%20%7C%20Real-Time%20Planning%20%7C%20Seamless%20Experience&descAlignY=60&descSize=20&fontColor=ffffff" width="100%" />
+
 # 🌍 AI Travel Planning Agent
 ### *Next-Generation Travel Planning Platform*
 
@@ -19,6 +22,20 @@
 [![Stars](https://img.shields.io/github/stars/yourusername/ai-travel-agent?style=for-the-badge)](https://github.com/yourusername/ai-travel-agent/stargazers)
 
 </div>
+
+---
+
+## 📑 **Table of Contents**
+
+- [Features](#-core-features)
+- [System Architecture](#️-system-architecture)
+- [Business Opportunity](#-business-opportunity)
+- [Technology Stack](#️-technology-stack)
+- [Quick Start](#-quick-start-guide)
+- [Feature Showcase](#-feature-showcase)
+- [Project Structure](#-project-structure)
+- [Security](#-security--compliance)
+- [API Documentation](#-api-documentation)
 
 ---
 
@@ -161,6 +178,27 @@ graph TB
     D --> D2
     D --> D3
     D --> D4
+```
+
+---
+
+## 📂 **Project Structure**
+
+```bash
+ai-travel-agent/
+├── 📂 backend/                 # FastAPI Backend
+│   ├── app.py                 # Main Application Entry
+│   ├── ai_chat.py             # AI Chat Logic (Gemini/LangGraph)
+│   ├── payment_system.py      # Stripe/PayPal Integration
+│   ├── models.py              # Pydantic Models & DB Schemas
+│   ├── database.py            # Database Connection
+│   └── ...
+├── 📂 frontend/                # React Frontend
+│   ├── src/                   # Source Code
+│   ├── public/                # Static Assets
+│   └── ...
+├── 📂 assets/                  # Project Assets (Images, Banners)
+└── README.md                  # Documentation
 ```
 
 ---
@@ -361,7 +399,8 @@ graph TB
 git clone https://github.com/yourusername/ai-travel-agent.git
 cd ai-travel-agent
 
-# Create virtual environment
+# Create virtual environment for backend
+cd backend
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
@@ -369,10 +408,10 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 #### **Step 2: Configure Environment**
 ```bash
 # Copy environment template
-cp .env.example .env
+cp ../.env.example ../.env
 
 # Edit .env file with your API keys
-nano .env  # or use your preferred editor
+nano ../.env  # or use your preferred editor
 ```
 
 <details>
@@ -404,13 +443,15 @@ REDIS_URL=redis://localhost:6379
 
 #### **Step 3: Launch the Platform**
 ```bash
-# 🚀 One-command startup (Recommended)
-python start.py
-
-# Or manual startup
+# 🚀 Backend startup
+cd backend
 pip install -r requirements.txt
-uvicorn app:app --reload --port 8000 &
-python -m http.server 8001
+python run.py
+
+# 🎨 Frontend startup (in a new terminal)
+cd frontend
+npm install
+npm start
 ```
 
 ### 🌐 **Access Your Platform**
@@ -419,10 +460,10 @@ python -m http.server 8001
 
 | Service | URL | Description |
 |:---|:---|:---|
-| 🏠 **Main Application** | [http://localhost:8001](http://localhost:8001) | Complete travel planning interface |
+| 🏠 **Main Application** | [http://localhost:3000](http://localhost:3000) | Complete travel planning interface |
 | 🔧 **API Documentation** | [http://localhost:8000/docs](http://localhost:8000/docs) | Interactive API explorer |
-| 📊 **Analytics Dashboard** | [http://localhost:8001/#analytics](http://localhost:8001/#analytics) | Business intelligence |
-| 💬 **AI Chat Interface** | [http://localhost:8001/#chat](http://localhost:8001/#chat) | Natural language planning |
+| 📊 **Analytics Dashboard** | [http://localhost:3000/analytics](http://localhost:3000/analytics) | Business intelligence |
+| 💬 **AI Chat Interface** | [http://localhost:3000/chat](http://localhost:3000/chat) | Natural language planning |
 | 🔍 **API Health Check** | [http://localhost:8000/api/health](http://localhost:8000/api/health) | System status |
 
 </div>
@@ -538,17 +579,22 @@ workflow.add_node("activity_agent", find_activities)
 workflow.add_node("weather_agent", get_weather_info)
 workflow.add_node("budget_agent", analyze_budget)
 workflow.add_node("planner_agent", create_itinerary)
-```
 
-### **Real API Integrations**
-- **OpenWeather API** - Live weather data & forecasts
-- **Google Maps Platform** - Places API (attractions, restaurants, hidden gems) & Directions API (walking routes)
-- **Wikipedia API** - Cultural & historical context for landmarks
-- **Eventbrite API** - Local events & activities
-- **Amadeus API** - Flight search
-- **Booking.com API** - Hotel search
-- **Stripe API** - Payment processing
-- **PayPal API** - Alternative payments
+
+### 🔌 **Real API Integrations**
+
+<div align="center">
+
+| Category | Service | 🚀 Utility |
+|:---|:---|:---|
+| **🌤️ Weather** | **OpenWeather API** | Live forecasts, severe weather alerts, historical climate data |
+| **🗺️ Mapping** | **Google Maps Platform** | Places API (hidden gems), Directions API (optimized routes) |
+| **🗓️ Events** | **Eventbrite API** | Real-time local events, concerts, and cultural activities |
+| **✈️ Flight** | **Amadeus API** | Global flight search, pricing, and availability |
+| **🏨 Hotel** | **Booking.com API** | Accommodation search, real-time rates, and booking |
+| **🧠 Knowledge** | **Wikipedia API** | Historical context, cultural insights, and landmark details |
+
+</div>
 
 ### **Advanced Security**
 - **JWT authentication** with refresh tokens
@@ -561,36 +607,46 @@ workflow.add_node("planner_agent", create_itinerary)
 
 ## 📊 **Analytics & Business Intelligence**
 
-### **Key Metrics**
-- **User Growth**: New users, active users, retention
-- **Revenue**: Monthly recurring revenue, conversion rates
-- **Engagement**: Session duration, pages per visit
-- **Performance**: API response times, error rates
-- **Business**: Trip planning success, booking conversion
+> Powered by **Plotly.js** and **WebSocket** real-time data streams.
 
-### **Real-time Monitoring**
-- **Live user sessions** and activity
-- **System performance** metrics
-- **Error tracking** and alerting
-- **API usage** and rate limiting
-- **Business KPIs** dashboard
+<div align="center">
+
+| 📈 **Growth Metrics** | 💰 **Revenue Intelligence** | ⚡ **System Performance** |
+|:---|:---|:---|
+| • **User Acquisition**: Daily/Monthly Active Users (DAU/MAU)<br>• **Retention**: Cohort analysis & churn rates<br>• **Conversion**: Visitor-to-User conversion funnels | • **MRR/ARR**: Monthly/Annual Recurring Revenue<br>• **LTV/CAC**: Lifetime Value vs cost of acquisition<br>• **RevPerUser**: Average revenue per active user | • **Latency**: API response time tracking<br>• **Error Rates**: Real-time exception monitoring<br>• **Uptime**: System availability status |
+
+</div>
 
 ---
 
-## 💳 **Payment Integration**
+## 💳 **Enterprise Payment Suite**
 
-### **Stripe Integration**
-- **Secure payment** processing
-- **Subscription management** for premium plans
-- **Webhook handling** for real-time updates
-- **Multi-currency** support
-- **Fraud protection** and compliance
+Secure, scalable, and global payment processing powered by industry leaders.
 
-### **PayPal Integration**
-- **Alternative payment** method
-- **International** payment support
-- **Buyer protection** and dispute resolution
-- **Recurring billing** support
+<table>
+<tr>
+<td width="50%" align="center">
+<img src="https://img.shields.io/badge/Stripe-635BFF?style=for-the-badge&logo=stripe&logoColor=white" height="40" />
+<br><br>
+<ul align="left">
+  <li>🔐 <b>PCI-DSS Compliant</b> secure processing</li>
+  <li>💳 <b>Global Cards</b> (Visa, Mastercard, Amex)</li>
+  <li>🔄 <b>Subscription</b> billing engine</li>
+  <li>🛡️ <b>Radar</b> fraud detection & prevention</li>
+</ul>
+</td>
+<td width="50%" align="center">
+<img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" height="40" />
+<br><br>
+<ul align="left">
+  <li>🌍 <b>100+ Currencies</b> supported</li>
+  <li>🛡️ <b>Buyer Protection</b> program</li>
+  <li>⚡ <b>One-Touch™</b> checkout experience</li>
+  <li>🏦 <b>Bank Transfer</b> & alternative methods</li>
+</ul>
+</td>
+</tr>
+</table>
 
 ---
 

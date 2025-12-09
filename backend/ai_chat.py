@@ -95,11 +95,76 @@ class EnhancedAIManager:
         """Process user message and return AI response"""
         try:
             logger.info(f"Processing message from user {user_id}: {message[:100]}...")
+            print(f"🎯 Processing message: '{message}' from user: {user_id}")
+            print(f"📍 Context available: {context is not None}")
+            if context and context.current_location:
+                print(f"📍 User location: {context.current_location}")
             
             # Try Gemini AI first for intelligent responses
             if GEMINI_AVAILABLE and gemini_model:
                 response_text = await self._generate_ai_response(message, context)
                 if response_text:
+                    # Check if user is asking for nearby places and we have their location
+                    location_keywords = [
+                        "nearby", "near me", "around here", "close to me", "local", 
+                        "in my location", "my location", "around me", "my area", 
+                        "in my area", "where i am", "current location", "here",
+                        "places to visit in my", "top places in my", "attractions in my",
+                        "at my location", "places at my", "beautiful places at my"
+                    ]
+                    
+                    # Debug logging
+                    print(f"🔍 Checking location query: '{message}'")
+                    print(f"📍 Has location context: {context and context.current_location is not None}")
+                    if context and context.current_location:
+                        print(f"📍 Location: {context.current_location}")
+                    
+                    location_query_detected = any(keyword in message.lower() for keyword in location_keywords)
+                    print(f"🎯 Location query detected: {location_query_detected}")
+                    print(f"🎯 Keywords found: {[kw for kw in location_keywords if kw in message.lower()]}")
+                    
+                    if context and context.current_location and location_query_detected:
+                        try:
+                            from real_api_config import real_api_manager
+                            lat = context.current_location.get("latitude")
+                            lon = context.current_location.get("longitude")
+                            
+                            if lat and lon:
+                                # Determine what type of places to search for
+                                place_type = "tourist_attraction"  # default
+                                if any(word in message.lower() for word in ["restaurant", "food", "eat", "dining"]):
+                                    place_type = "restaurant"
+                                elif any(word in message.lower() for word in ["hotel", "stay", "accommodation"]):
+                                    place_type = "lodging"
+                                elif any(word in message.lower() for word in ["shop", "shopping", "store"]):
+                                    place_type = "store"
+                                elif any(word in message.lower() for word in ["hospital", "medical", "pharmacy"]):
+                                    place_type = "hospital"
+                                elif any(word in message.lower() for word in ["gas", "fuel", "petrol"]):
+                                    place_type = "gas_station"
+                                
+                                nearby_places = await real_api_manager.get_nearby_places(lat, lon, place_type, radius=10000)
+                                
+                                if nearby_places and len(nearby_places) > 0:
+                                    places_text = "\n\n🗺️ **Beautiful Places Near Your Location:**\n\n"
+                                    for i, place in enumerate(nearby_places[:8], 1):
+                                        distance = place.get("distance", "Unknown")
+                                        rating = place.get("rating", "N/A")
+                                        price = place.get("price", 0)
+                                        price_text = "Free" if price == 0 else f"${price}"
+                                        
+                                        places_text += f"{i}. **{place['name']}**\n"
+                                        places_text += f"   📍 {distance}km away | ⭐ {rating}/5 | 💰 {price_text}\n"
+                                        places_text += f"   {place['description']}\n\n"
+                                    
+                                    places_text += "\n💡 **Tip:** You can ask me for more details about any of these places, or request specific types like 'restaurants near me' or 'museums nearby'!"
+                                    response_text += places_text
+                                else:
+                                    response_text += "\n\n📍 I can see you're asking about places in your area! I have your location but I'm having trouble accessing real-time place data right now. You can try asking about specific types of places like 'restaurants near me' or 'attractions nearby'."
+                        except Exception as e:
+                            print(f"Error getting nearby places: {e}")
+                            response_text += "\n\n📍 I can see you're asking about places in your area! I have your location but I'm having trouble accessing real-time place data right now. Please try again or ask about specific types of places."
+                    
                     return {
                         "success": True,
                         "response": {
@@ -112,8 +177,65 @@ class EnhancedAIManager:
                         "model_used": "gemini"
                     }
             
-            # Fallback to rule-based responses
-            response_text = self._generate_fallback_response(message)
+            # Check for location queries even without Gemini
+            location_keywords = [
+                "nearby", "near me", "around here", "close to me", "local", 
+                "in my location", "my location", "around me", "my area", 
+                "in my area", "where i am", "current location", "here",
+                "places to visit in my", "top places in my", "attractions in my",
+                "at my location", "places at my", "beautiful places at my"
+            ]
+            
+            location_query_detected = any(keyword in message.lower() for keyword in location_keywords)
+            print(f"🔍 Fallback: Location query detected: {location_query_detected}")
+            
+            if location_query_detected:
+                if not context or not context.current_location:
+                    response_text = "I'd love to help you find places in your area! However, I don't have access to your current location. Please allow location access in your browser, or you can tell me which city you're in and I can suggest great places to visit there!"
+                else:
+                    # Try to get nearby places even without Gemini
+                    try:
+                        from real_api_config import real_api_manager
+                        lat = context.current_location.get("latitude")
+                        lon = context.current_location.get("longitude")
+                        
+                        if lat and lon:
+                            print(f"🔍 Fallback: Getting nearby places for ({lat}, {lon})")
+                            
+                            # Determine place type from message
+                            place_type = "tourist_attraction"
+                            if any(word in message.lower() for word in ["restaurant", "food", "eat", "dining"]):
+                                place_type = "restaurant"
+                            elif any(word in message.lower() for word in ["hotel", "stay", "accommodation"]):
+                                place_type = "lodging"
+                            elif any(word in message.lower() for word in ["shop", "shopping", "store"]):
+                                place_type = "store"
+                            
+                            nearby_places = await real_api_manager.get_nearby_places(lat, lon, place_type, radius=10000)
+                            
+                            if nearby_places and len(nearby_places) > 0:
+                                response_text = "🗺️ **Here are some beautiful places near your location:**\n\n"
+                                for i, place in enumerate(nearby_places[:8], 1):
+                                    distance = place.get("distance", "Unknown")
+                                    rating = place.get("rating", "N/A")
+                                    price = place.get("price", 0)
+                                    price_text = "Free" if price == 0 else f"${price}"
+                                    
+                                    response_text += f"{i}. **{place['name']}**\n"
+                                    response_text += f"   📍 {distance}km away | ⭐ {rating}/5 | 💰 {price_text}\n"
+                                    response_text += f"   {place['description']}\n\n"
+                                
+                                response_text += "\n💡 **Tip:** I'm using your live GPS location to show you real-time nearby recommendations! Ask me for more specific types of places anytime."
+                            else:
+                                response_text = "I can see you're asking about places in your area! I have your location but I'm having trouble finding nearby places right now. You can try asking about specific types of places like 'restaurants near me' or 'attractions nearby'."
+                        else:
+                            response_text = "I can see you're asking about places in your area! Let me help you find some great nearby recommendations."
+                    except Exception as e:
+                        print(f"❌ Error in fallback location search: {e}")
+                        response_text = "I can see you're asking about places in your area! I have your location but I'm having trouble accessing place data right now. Please try again."
+            else:
+                # Fallback to rule-based responses
+                response_text = self._generate_fallback_response(message)
             
             return {
                 "success": True,
@@ -127,11 +249,16 @@ class EnhancedAIManager:
                 "model_used": "fallback"
             }
         except Exception as e:
+            import traceback
+            error_details = traceback.format_exc()
             logger.error(f"Error processing message: {e}")
+            logger.error(f"Full traceback: {error_details}")
+            print(f"❌ Chat processing error: {e}")
+            print(f"❌ Full traceback: {error_details}")
             return {
                 "success": False,
                 "response": {
-                    "content": "I'm sorry, I'm having trouble processing your request right now. Please try again.",
+                    "content": f"I'm sorry, I'm having trouble processing your request right now. Error: {str(e)}. Please try again.",
                     "type": "error",
                     "timestamp": datetime.now().isoformat()
                 },
@@ -145,7 +272,12 @@ class EnhancedAIManager:
             context_info = ""
             if context:
                 if context.current_location:
-                    context_info += f"User location: {context.current_location}\n"
+                    lat = context.current_location.get("latitude")
+                    lon = context.current_location.get("longitude")
+                    context_info += f"🌍 User's LIVE GPS Location: Latitude {lat}, Longitude {lon}\n"
+                    context_info += "✅ IMPORTANT: The user's location is being tracked in REAL-TIME via GPS.\n"
+                    context_info += "✅ When they ask about 'nearby', 'near me', 'at my location', or 'beautiful places at my location', you can provide real-time recommendations.\n"
+                    context_info += "✅ The system will automatically fetch nearby places from Google Places API based on their GPS coordinates.\n\n"
                 if context.preferences:
                     context_info += f"User preferences: {context.preferences}\n"
                 if context.trip_context:
@@ -170,6 +302,9 @@ Instructions:
 - If the user is asking about travel preferences, help them plan their trip step by step
 - Use real-time information when possible
 - Be enthusiastic about travel planning
+- 🌍 REAL-TIME LOCATION AWARENESS: If the user has shared their GPS location and asks about nearby places, beautiful places at their location, or anything "near me", acknowledge that you're using their LIVE GPS coordinates to provide real-time recommendations
+- For location-based queries with GPS data, emphasize that you're showing them places based on their current real-time location
+- When GPS location is available, encourage users to explore nearby attractions, restaurants, and points of interest
 
 Respond in a natural, helpful way:
 """
@@ -189,14 +324,30 @@ Respond in a natural, helpful way:
         """Generate smart suggestions based on message and context"""
         message_lower = message.lower()
         
+        # Location-based suggestions if we have user's location
+        if context and context.current_location:
+            if any(word in message_lower for word in ["nearby", "near", "local", "around"]):
+                return [
+                    "Show me nearby restaurants",
+                    "What attractions are close to me?",
+                    "Find local shopping areas",
+                    "Any good hotels nearby?"
+                ]
+        
         # Context-aware suggestions
         if any(word in message_lower for word in ["destination", "where", "place", "country", "city"]):
-            return [
+            suggestions = [
                 "What's your budget for this trip?",
                 "How many days are you planning?",
                 "What activities interest you most?",
                 "Any specific travel dates in mind?"
             ]
+            
+            # Add location-based suggestion if we have user's location
+            if context and context.current_location:
+                suggestions.insert(0, "What's interesting near my current location?")
+            
+            return suggestions
         elif any(word in message_lower for word in ["budget", "cost", "money", "expensive", "cheap"]):
             return [
                 "What destinations fit this budget?",
@@ -262,7 +413,10 @@ Respond in a natural, helpful way:
         
         # Activity queries
         elif any(word in message_lower for word in ["activity", "activities", "things to do", "attractions"]):
-            return "I can suggest amazing activities! What are your interests? (culture, adventure, food, nature, etc.)"
+            if context and context.current_location:
+                return "I can suggest amazing activities! I can show you what's nearby your current location or help you explore activities in your travel destination. What are your interests? (culture, adventure, food, nature, etc.)"
+            else:
+                return "I can suggest amazing activities! What are your interests? (culture, adventure, food, nature, etc.)"
         
         # Weather queries
         elif any(word in message_lower for word in ["weather", "climate", "temperature"]):

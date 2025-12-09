@@ -1,67 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import apiService from '../services/api';
 
-const statusStyles = `
-  .realtime-status {
-    position: fixed;
-    top: 20px;
-    right: 20px;
-    background: rgba(0, 0, 0, 0.8);
-    color: white;
-    padding: 15px;
-    border-radius: 10px;
-    font-size: 12px;
-    z-index: 1000;
-    min-width: 250px;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-  }
-
-  .status-header {
-    font-weight: bold;
-    margin-bottom: 10px;
-    color: #4facfe;
-  }
-
-  .api-status {
-    display: flex;
-    justify-content: space-between;
-    margin: 5px 0;
-    padding: 3px 0;
-  }
-
-  .status-active {
-    color: #10b981;
-  }
-
-  .status-inactive {
-    color: #ef4444;
-  }
-
-  .status-toggle {
-    position: absolute;
-    top: 5px;
-    right: 5px;
-    background: none;
-    border: none;
-    color: white;
-    cursor: pointer;
-    font-size: 16px;
-  }
-
-  .feature-list {
-    margin-top: 10px;
-    padding-top: 10px;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-  }
-
-  .feature-item {
-    display: flex;
-    justify-content: space-between;
-    margin: 3px 0;
-    font-size: 11px;
-  }
-`;
+import './RealTimeStatus.css';
 
 interface RealTimeStatusProps {
     showByDefault?: boolean;
@@ -95,7 +35,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({ showByDefault = false }
     if (!isVisible) {
         return (
             <>
-                <style>{statusStyles}</style>
+
                 <button
                     className="realtime-status"
                     onClick={() => setIsVisible(true)}
@@ -109,7 +49,7 @@ const RealTimeStatus: React.FC<RealTimeStatusProps> = ({ showByDefault = false }
 
     return (
         <>
-            <style>{statusStyles}</style>
+
             <div className="realtime-status">
                 <button
                     className="status-toggle"
