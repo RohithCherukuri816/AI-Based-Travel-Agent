@@ -670,6 +670,7 @@ sudo systemctl start ai-travel-agent
 ```
 
 ### **Cloud Platforms**
+
 - **AWS**: ECS, Lambda, RDS
 - **Google Cloud**: GKE, Cloud Run, Cloud SQL
 - **Azure**: AKS, App Service, Azure SQL
@@ -792,52 +793,6 @@ POST /api/notifications/push     # Push notifications
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
----
-
-## 🙏 **Acknowledgments**
-
-- **OpenAI** for GPT models and API
-- **Anthropic** for Claude models
-- **LangChain** for AI agent framework
-- **FastAPI** for high-performance web framework
-- **Stripe** for payment processing
-- **OpenWeather** for weather data
-- **Google** for Places API and Directions API
-- **Wikipedia** for cultural and historical context
-- **Eventbrite** for local events and activities
-
----
-
-## 📞 **Support & Contact**
-
-- **📧 Email**: support@aitravelagent.com
-- **💬 Discord**: [Join our community](https://discord.gg/aitravelagent)
-- **🐛 Issues**: [GitHub Issues](https://github.com/yourusername/ai-travel-agent/issues)
-- **📖 Docs**: [Documentation](https://docs.aitravelagent.com)
-- **🎥 Demo**: [Live Demo](https://demo.aitravelagent.com)
-
----
-
-## 🚀 **Ready to Launch Your Startup?**
-
-This is **NOT** just code. This is your **TICKET TO THE FUTURE** of travel planning.
-
-**What you get:**
-- ✅ **Production-ready** AI travel platform
-- ✅ **Enterprise-grade** architecture
-- ✅ **Scalable** business model
-- ✅ **Market-validated** features
-- ✅ **Professional** codebase
-- ✅ **Comprehensive** documentation
-
-**What you need to do:**
-1. **Customize** the branding and features
-2. **Add** your API keys and configurations
-3. **Deploy** to your preferred cloud platform
-4. **Launch** your marketing campaign
-5. **Scale** based on user growth
-
-**The future of travel planning is here. Are you ready to claim it?**
 
 ---
 
